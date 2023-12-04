@@ -1,0 +1,3 @@
+[submodule "wire-pod"]
+	path = wire-pod
+	url = https://github.com/kercre123/wire-pod
