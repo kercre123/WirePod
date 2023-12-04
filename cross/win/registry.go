@@ -1,4 +1,4 @@
-package cross
+package cross_win
 
 import (
 	"fmt"
@@ -49,7 +49,7 @@ var StartupRunKey KeyInfo
 var Inited bool
 var IsInstaller bool
 
-func Init() {
+func Init() error {
 	if CheckIfElevated() {
 		IsInstaller = true
 	} else {
@@ -76,6 +76,7 @@ func Init() {
 		UninstallKey.Perms = Win_UninstallPodPerms
 	}
 	Inited = true
+	return nil
 }
 
 func DeleteEverythingFromRegistry() error {

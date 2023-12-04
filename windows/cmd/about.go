@@ -8,7 +8,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	"github.com/kercre123/wire-pod/chipper/pkg/podonwin"
+	cross "github.com/kercre123/WirePod/cross/win"
 )
 
 var AboutWindow fyne.Window
@@ -18,15 +18,15 @@ var FakeWindow fyne.Window
 
 func RunPodAtStartup(installPath string) {
 	cmd := fmt.Sprintf(`cmd.exe /C start "" "` + filepath.Join(installPath, "chipper\\chipper.exe") + `" -d`)
-	podonwin.UpdateRegistryValueString(podonwin.StartupRunKey, "wire-pod", cmd)
+	cross.UpdateRegistryValueString(cross.StartupRunKey, "wire-pod", cmd)
 }
 
 func DontRunPodAtStartup(installPath string) {
-	podonwin.DeleteRegistryValue(podonwin.StartupRunKey, "wire-pod")
+	cross.DeleteRegistryValue(cross.StartupRunKey, "wire-pod")
 }
 
 func IsPodRunningAtStartup() bool {
-	_, err := podonwin.GetRegistryValueString(podonwin.StartupRunKey, "wire-pod")
+	_, err := cross.GetRegistryValueString(cross.StartupRunKey, "wire-pod")
 	if err != nil {
 		return false
 	}
@@ -34,7 +34,7 @@ func IsPodRunningAtStartup() bool {
 }
 
 func GetPodVersion() string {
-	podVersion, err := podonwin.GetRegistryValueString(podonwin.SoftwareKey, "PodVersion")
+	podVersion, err := cross.GetRegistryValueString(cross.SoftwareKey, "PodVersion")
 	if err != nil {
 		return "v0.0.0"
 	}

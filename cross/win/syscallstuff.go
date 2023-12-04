@@ -1,4 +1,4 @@
-package cross
+package cross_win
 
 import "syscall"
 

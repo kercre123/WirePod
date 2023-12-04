@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export BUILDFILES="./cmd/windows"
+export BUILDFILES="./cmd"
 
 export CC=/usr/bin/x86_64-w64-mingw32-gcc
 export CXX=/usr/bin/x86_64-w64-mingw32-g++
@@ -9,10 +9,10 @@ export ARCHITECTURE=amd64
 
 set -e
 
-if [[ ! -f .aptDone ]]; then
-    sudo apt install mingw-w64 zip build-essential autoconf unzip
-    touch .aptDone
-fi
+# if [[ ! -f .aptDone ]]; then
+#     sudo apt install mingw-w64 zip build-essential autoconf unzip
+#     touch .aptDone
+# fi
 
 export ORIGDIR="$(pwd)"
 export PODLIBS="${ORIGDIR}/libs"
@@ -62,7 +62,7 @@ export CGO_CFLAGS="-I${PODLIBS}/ogg/include -I${PODLIBS}/opus/include -I${PODLIB
 
 cd ..
 
-x86_64-w64-mingw32-windres cmd/windows/rc/app.rc -O coff -o cmd/windows/app.syso
+x86_64-w64-mingw32-windres cmd/rc/app.rc -O coff -o cmd/app.syso
 
 go build \
 -tags ${GO_TAGS} \
