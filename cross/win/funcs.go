@@ -1,7 +1,9 @@
 package cross_win
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 )
 
@@ -73,4 +75,43 @@ func RunPodAtStartup(run bool) error {
 		return err
 	}
 	return nil
+}
+
+func IsPodAlreadyRunning() bool {
+	conf, err := ReadConfig()
+	if err != nil {
+		return false
+	}
+	if conf.LastRunningPID == 0 {
+		return false
+	}
+	isRunning, err := IsProcessRunning(conf.LastRunningPID)
+	if err != nil {
+		fmt.Println("syscall error")
+		panic(err)
+	}
+	return isRunning
+}
+func KillExistingPod() error {
+	conf, err := ReadConfig()
+	if err != nil {
+		return err
+	}
+	if conf.LastRunningPID == 0 {
+		return errors.New("no pod running (pid: 0)")
+	}
+	proc, err := os.FindProcess(conf.LastRunningPID)
+	if err != nil {
+		return err
+	}
+	proc.Kill()
+	return nil
+}
+func OnExit() {
+	conf, err := ReadConfig()
+	if err != nil {
+		return
+	}
+	conf.LastRunningPID = 0
+	WriteConfig(conf)
 }

@@ -6,6 +6,8 @@ export CC=/usr/bin/x86_64-w64-mingw32-gcc
 export CXX=/usr/bin/x86_64-w64-mingw32-g++
 export PODHOST=x86_64-w64-mingw32
 export ARCHITECTURE=amd64
+export CHPATH="../wire-pod/chipper"
+export CLPATH="../wire-pod/vector-cloud"
 
 set -e
 
@@ -60,36 +62,32 @@ export CGO_ENABLED=1
 export CGO_LDFLAGS="-L${PODLIBS}/ogg/lib -L${PODLIBS}/opus/lib -L${PODLIBS}/vosk"
 export CGO_CFLAGS="-I${PODLIBS}/ogg/include -I${PODLIBS}/opus/include -I${PODLIBS}/vosk"
 
-cd ..
-
 x86_64-w64-mingw32-windres cmd/rc/app.rc -O coff -o cmd/app.syso
 
 go build \
 -tags ${GO_TAGS} \
 -ldflags "-H=windowsgui" \
--o windows/chipper.exe \
+-o chipper.exe \
 ${BUILDFILES}
 
 go build \
 -tags ${GO_TAGS} \
 -ldflags "-H=windowsgui" \
--o windows/uninstall.exe \
-./cmd/wire-pod-installer/uninstall/main.go
-
-cd windows
+-o uninstall.exe \
+./uninstall/main.go
 
 rm -rf tmp
 mkdir -p tmp/wire-pod/chipper
 mkdir -p tmp/wire-pod/vector-cloud/build
 
-cp -r ../intent-data tmp/wire-pod/chipper/
-cp ../weather-map.json tmp/wire-pod/chipper/
-cp -r ../webroot tmp/wire-pod/chipper/
-cp -r ../epod tmp/wire-pod/chipper/
-cp ../stttest.pcm tmp/wire-pod/chipper/
-cp ../../vector-cloud/build/vic-cloud tmp/wire-pod/vector-cloud/build/
-cp ../../vector-cloud/pod-bot-install.sh tmp/wire-pod/vector-cloud/
-cp -r icons tmp/wire-pod/chipper/
+cp -r ${CHPATH}/intent-data tmp/wire-pod/chipper/
+cp ${CHPATH}/weather-map.json tmp/wire-pod/chipper/
+cp -r ${CHPATH}/webroot tmp/wire-pod/chipper/
+cp -r ${CHPATH}/epod tmp/wire-pod/chipper/
+cp ${CHPATH}/stttest.pcm tmp/wire-pod/chipper/
+cp ${CLPATH}/build/vic-cloud tmp/wire-pod/vector-cloud/build/
+cp ${CLPATH}/pod-bot-install.sh tmp/wire-pod/vector-cloud/
+cp -r ../icons tmp/wire-pod/chipper/icons
 
 # echo "export DEBUG_LOGGING=true" > tmp/botpack/wire-pod/chipper/source.sh
 # echo "export STT_SERVICE=vosk" >> tmp/botpack/wire-pod/chipper/source.sh

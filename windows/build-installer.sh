@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export BUILDFILES="./cmd/wire-pod-installer"
+export BUILDFILES="./installer"
 
 export ARCHITECTURE=amd64
 
@@ -18,13 +18,11 @@ export CC=/usr/bin/x86_64-w64-mingw32-gcc
 export CXX=/usr/bin/x86_64-w64-mingw32-g++
 
 
-cd ..
-
-x86_64-w64-mingw32-windres cmd/wire-pod-installer/rc/app.rc -O coff -o cmd/wire-pod-installer/app.syso
+x86_64-w64-mingw32-windres installer/rc/app.rc -O coff -o installer/app.syso
 
 go build \
 -ldflags "-H=windowsgui" \
--o windows/wire-pod-installer.exe \
+-o wire-pod-installer.exe \
 ${BUILDFILES}
 
 #upx windows/wire-pod-installer.exe
