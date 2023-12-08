@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/kercre123/wire-pod/chipper/pkg/cross_win"
+	cross_win "github.com/kercre123/WirePod/cross/win"
 )
 
 var GitHubTag string

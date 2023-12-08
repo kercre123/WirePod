@@ -20,14 +20,14 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
-	"github.com/kercre123/wire-pod/chipper/pkg/cross_win"
+	cross_win "github.com/kercre123/WirePod/cross/win"
 	"github.com/ncruces/zenity"
 )
 
 //go:embed ico
 var iconData embed.FS
 
-var amd64podURL string = "https://github.com/kercre123/wire-pod/releases/latest/download/wire-pod-win-amd64.zip"
+var amd64podURL string = "https://github.com/kercre123/WirePod/releases/latest/download/wire-pod-win-amd64.zip"
 
 //var amd64podURL string = "http://192.168.1.2:82/wire-pod-win-amd64.zip"
 
@@ -375,7 +375,7 @@ func main() {
 		os.Exit(0)
 	}
 	fmt.Println("Initing registry")
-	cross_win.Init()
+	cross_win.InitReg()
 	fmt.Println("Getting tag from GitHub")
 	tag, err := GetLatestReleaseTag("kercre123", "wire-pod")
 	if err != nil {
