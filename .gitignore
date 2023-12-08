@@ -1,0 +1,6 @@
+/windows/cmd/app.syso
+/windows/*.exe
+/windows/opus
+/windows/ogg
+/macos/opus
+/macos/ogg
