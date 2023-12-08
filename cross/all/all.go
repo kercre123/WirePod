@@ -27,3 +27,14 @@ type WPConfig struct {
 	NeedsRestart   bool `json:"needsrestart"`
 	LastRunningPID int  `json:"lastrunningpid"`
 }
+
+type OSFuncs interface {
+	Init() error
+	ReadConfig() (WPConfig, error)
+	RunPodAtStartup(bool) error
+	WriteConfig(WPConfig) error
+	IsPodAlreadyRunning() bool
+	IsPIDProcessRunning(int) (bool, error)
+	KillExistingPod() error
+	OnExit()
+}

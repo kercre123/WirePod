@@ -1,4 +1,4 @@
-package main
+package podapp
 
 import (
 	"crypto/tls"

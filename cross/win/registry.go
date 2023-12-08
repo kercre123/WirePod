@@ -49,7 +49,7 @@ var StartupRunKey KeyInfo
 var Inited bool
 var IsInstaller bool
 
-func Init() error {
+func InitReg() error {
 	if CheckIfElevated() {
 		IsInstaller = true
 	} else {

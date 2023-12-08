@@ -5,23 +5,25 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	all "github.com/kercre123/WirePod/cross/all"
 )
 
-// Init() defined in registry.go
-
-type WPConfig struct {
-	WSPort       string `json:"wsport"`
-	RunAtStartup bool   `json:"runatstartup"`
-	InstallPath  string `json:"runtimepath"`
-	Version      string `json:"version"`
-	// windows-specific
-	// if NeedsRestart && hostname != escapepod; then error
-	NeedsRestart   bool `json:"needsrestart"`
-	LastRunningPID int  `json:"lastrunningpid"`
+type Windows struct {
+	all.OSFuncs
 }
 
-func ReadConfig() (WPConfig, error) {
-	var wp WPConfig
+func NewWindows() *Windows {
+	var WindowsObj *Windows
+	return WindowsObj
+}
+
+func (w *Windows) Init() error {
+	return InitReg()
+}
+
+func (w *Windows) ReadConfig() (all.WPConfig, error) {
+	var wp all.WPConfig
 	port, err := GetRegistryValueString(SoftwareKey, "WebPort")
 	if err != nil {
 		return wp, err
@@ -44,7 +46,7 @@ func ReadConfig() (WPConfig, error) {
 	return wp, nil
 }
 
-func WriteConfig(wp WPConfig) error {
+func (w *Windows) WriteConfig(wp all.WPConfig) error {
 	err := UpdateRegistryValueString(SoftwareKey, "InstallPath", wp.InstallPath)
 	if err != nil {
 		return err
@@ -57,8 +59,8 @@ func WriteConfig(wp WPConfig) error {
 	return nil
 }
 
-func RunPodAtStartup(run bool) error {
-	conf, err := ReadConfig()
+func (w *Windows) RunPodAtStartup(run bool) error {
+	conf, err := w.ReadConfig()
 	if err != nil {
 		return err
 	}
@@ -70,15 +72,15 @@ func RunPodAtStartup(run bool) error {
 		DeleteRegistryValue(StartupRunKey, "wire-pod")
 		conf.RunAtStartup = false
 	}
-	err = WriteConfig(conf)
+	err = w.WriteConfig(conf)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func IsPodAlreadyRunning() bool {
-	conf, err := ReadConfig()
+func (w *Windows) IsPodAlreadyRunning() bool {
+	conf, err := w.ReadConfig()
 	if err != nil {
 		return false
 	}
@@ -92,8 +94,13 @@ func IsPodAlreadyRunning() bool {
 	}
 	return isRunning
 }
-func KillExistingPod() error {
-	conf, err := ReadConfig()
+
+func (w *Windows) IsPIDProcessRunning(pid int) (bool, error) {
+	return IsProcessRunning(pid)
+}
+
+func (w *Windows) KillExistingPod() error {
+	conf, err := w.ReadConfig()
 	if err != nil {
 		return err
 	}
@@ -107,11 +114,12 @@ func KillExistingPod() error {
 	proc.Kill()
 	return nil
 }
-func OnExit() {
-	conf, err := ReadConfig()
+
+func (w *Windows) OnExit() {
+	conf, err := w.ReadConfig()
 	if err != nil {
 		return
 	}
 	conf.LastRunningPID = 0
-	WriteConfig(conf)
+	w.WriteConfig(conf)
 }

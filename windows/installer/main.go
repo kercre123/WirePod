@@ -20,7 +20,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
-	"github.com/kercre123/wire-pod/chipper/pkg/podonwin"
+	"github.com/kercre123/wire-pod/chipper/pkg/cross_win"
 	"github.com/ncruces/zenity"
 )
 
@@ -99,7 +99,7 @@ func PostInstall_RestartReq(myApp fyne.App, is InstallSettings) {
 	})
 
 	rebootLaterButton := widget.NewButton("Reboot Later", func() {
-		podonwin.UpdateRegistryValueString(podonwin.SoftwareKey, "RestartNeeded", "true")
+		cross_win.UpdateRegistryValueString(cross_win.SoftwareKey, "RestartNeeded", "true")
 		os.Exit(0)
 	})
 
@@ -187,7 +187,7 @@ func DoInstall(myApp fyne.App, is InstallSettings) {
 			zenity.ErrorIcon,
 			zenity.Title("wire-pod installer"),
 		)
-		podonwin.DeleteEverythingFromRegistry()
+		cross_win.DeleteEverythingFromRegistry()
 		os.Exit(1)
 	}
 	window.Hide()
@@ -233,7 +233,7 @@ func GetSetNameEscapepod(myApp fyne.App, is InstallSettings) {
 	})
 	noButton := widget.NewButton("No", func() {
 		is.SetHostnameEpod = false
-		podonwin.DeleteRegistryValue(podonwin.SoftwareKey, "RestartNeeded")
+		cross_win.DeleteRegistryValue(cross_win.SoftwareKey, "RestartNeeded")
 		window.Hide()
 		DoInstall(myApp, is)
 	})
@@ -337,7 +337,7 @@ func StopWirePodIfRunning() {
 	podPid, err := os.ReadFile(filepath.Join(os.TempDir(), "/wirepodrunningPID"))
 	if err == nil {
 		pid, _ := strconv.Atoi(string(podPid))
-		if is, _ := podonwin.IsProcessRunning(pid); is {
+		if is, _ := cross_win.IsProcessRunning(pid); is {
 			podProcess, err := os.FindProcess(pid)
 			if err == nil {
 				fmt.Println("Stopping wire-pod")
@@ -375,7 +375,7 @@ func main() {
 		os.Exit(0)
 	}
 	fmt.Println("Initing registry")
-	podonwin.Init()
+	cross_win.Init()
 	fmt.Println("Getting tag from GitHub")
 	tag, err := GetLatestReleaseTag("kercre123", "wire-pod")
 	if err != nil {

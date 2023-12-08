@@ -1,14 +1,12 @@
-package main
+package podapp
 
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	cross "github.com/kercre123/WirePod/cross/win"
 )
 
 var AboutWindow fyne.Window
@@ -16,29 +14,17 @@ var WindowDefined bool
 
 var FakeWindow fyne.Window
 
-func RunPodAtStartup(installPath string) {
-	cmd := fmt.Sprintf(`cmd.exe /C start "" "` + filepath.Join(installPath, "chipper\\chipper.exe") + `" -d`)
-	cross.UpdateRegistryValueString(cross.StartupRunKey, "wire-pod", cmd)
-}
-
-func DontRunPodAtStartup(installPath string) {
-	cross.DeleteRegistryValue(cross.StartupRunKey, "wire-pod")
-}
-
 func IsPodRunningAtStartup() bool {
-	_, err := cross.GetRegistryValueString(cross.StartupRunKey, "wire-pod")
-	if err != nil {
-		return false
-	}
-	return true
+	conf, _ := cross.ReadConfig()
+	return conf.RunAtStartup
 }
 
 func GetPodVersion() string {
-	podVersion, err := cross.GetRegistryValueString(cross.SoftwareKey, "PodVersion")
+	conf, err := cross.ReadConfig()
 	if err != nil {
-		return "v0.0.0"
+		return "error getting version =("
 	}
-	return podVersion
+	return conf.Version
 }
 
 func DefineAboutWindow(myApp fyne.App) {
@@ -59,11 +45,7 @@ func DefineAboutWindow(myApp fyne.App) {
 	version := widget.NewRichTextWithText("Version: " + GetPodVersion())
 
 	runStartup := widget.NewCheck("Run wire-pod when user logs in?", func(checked bool) {
-		if checked {
-			RunPodAtStartup(InstallPath)
-		} else {
-			DontRunPodAtStartup(InstallPath)
-		}
+		cross.RunPodAtStartup(checked)
 	})
 
 	runStartup.SetChecked(IsPodRunningAtStartup())

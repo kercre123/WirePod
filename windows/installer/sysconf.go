@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/kercre123/wire-pod/chipper/pkg/podonwin"
+	"github.com/kercre123/wire-pod/chipper/pkg/cross_win"
 )
 
 var GitHubTag string
@@ -18,9 +18,9 @@ func UpdateRegistry(is InstallSettings) {
 }
 
 func DeleteAnyOtherInstallation() {
-	instPath, err := podonwin.GetRegistryValueString(podonwin.UninstallKey, "InstallPath")
+	instPath, err := cross_win.GetRegistryValueString(cross_win.UninstallKey, "InstallPath")
 	if err != nil {
-		val, err := podonwin.GetRegistryValueString(podonwin.SoftwareKey, "InstallPath")
+		val, err := cross_win.GetRegistryValueString(cross_win.SoftwareKey, "InstallPath")
 		if err != nil {
 			return
 		}
@@ -29,10 +29,10 @@ func DeleteAnyOtherInstallation() {
 		cmd.Env = os.Environ()
 		cmd.Env = append(cmd.Env, "RUN_DISCRETE=true")
 		cmd.Run()
-		podonwin.DeleteEverythingFromRegistry()
+		cross_win.DeleteEverythingFromRegistry()
 	} else {
 		os.RemoveAll(instPath)
-		podonwin.DeleteEverythingFromRegistry()
+		cross_win.DeleteEverythingFromRegistry()
 	}
 }
 
@@ -43,33 +43,33 @@ func UpdateUninstallRegistry(is InstallSettings) {
 	publisher := "github.com/kercre123"
 	uninstallString := filepath.Join(is.Where, `\uninstall.exe`)
 	installLocation := filepath.Join(is.Where, `\chipper\chipper.exe`)
-	err := podonwin.UpdateRegistryValueString(podonwin.UninstallKey, "DisplayName", appName)
+	err := cross_win.UpdateRegistryValueString(cross_win.UninstallKey, "DisplayName", appName)
 	if err != nil {
 		// if this one works, the rest will
 		fmt.Printf("Error setting DisplayName: %v\n", err)
 		return
 	}
-	podonwin.UpdateRegistryValueString(podonwin.UninstallKey, "DisplayIcon", displayIcon)
-	podonwin.UpdateRegistryValueString(podonwin.UninstallKey, "DisplayVersion", displayVersion)
-	podonwin.UpdateRegistryValueString(podonwin.UninstallKey, "Publisher", publisher)
-	podonwin.UpdateRegistryValueString(podonwin.UninstallKey, "UninstallString", uninstallString)
-	podonwin.UpdateRegistryValueString(podonwin.UninstallKey, "InstallLocation", installLocation)
+	cross_win.UpdateRegistryValueString(cross_win.UninstallKey, "DisplayIcon", displayIcon)
+	cross_win.UpdateRegistryValueString(cross_win.UninstallKey, "DisplayVersion", displayVersion)
+	cross_win.UpdateRegistryValueString(cross_win.UninstallKey, "Publisher", publisher)
+	cross_win.UpdateRegistryValueString(cross_win.UninstallKey, "UninstallString", uninstallString)
+	cross_win.UpdateRegistryValueString(cross_win.UninstallKey, "InstallLocation", installLocation)
 	fmt.Println("Registry entries successfully created")
 }
 
 func UpdateSoftwareRegistry(is InstallSettings) {
-	err := podonwin.UpdateRegistryValueString(podonwin.SoftwareKey, "InstallPath", is.Where)
+	err := cross_win.UpdateRegistryValueString(cross_win.SoftwareKey, "InstallPath", is.Where)
 	if err != nil {
 		fmt.Printf("Error setting registry key InstallPath: %v\n", err)
 		return
 	}
-	podonwin.UpdateRegistryValueString(podonwin.SoftwareKey, "PodVersion", GitHubTag)
-	podonwin.UpdateRegistryValueString(podonwin.SoftwareKey, "WebPort", is.WebPort)
+	cross_win.UpdateRegistryValueString(cross_win.SoftwareKey, "PodVersion", GitHubTag)
+	cross_win.UpdateRegistryValueString(cross_win.SoftwareKey, "WebPort", is.WebPort)
 }
 
 func RunPodAtStartup(is InstallSettings) {
 	cmd := fmt.Sprintf(`cmd.exe /C start "" "` + filepath.Join(is.Where, "chipper\\chipper.exe") + `" -d`)
-	podonwin.UpdateRegistryValueString(podonwin.StartupRunKey, "wire-pod", cmd)
+	cross_win.UpdateRegistryValueString(cross_win.StartupRunKey, "wire-pod", cmd)
 }
 
 func RebootSystem() error {
@@ -131,13 +131,13 @@ func AllowThroughFirewall(is InstallSettings) {
 }
 
 func StopWirePod_Registry() {
-	val, err := podonwin.GetRegistryValueInt(podonwin.SoftwareKey, "LastRunningPID")
+	val, err := cross_win.GetRegistryValueInt(cross_win.SoftwareKey, "LastRunningPID")
 	if err != nil {
 		fmt.Println("wire-pod is not running (good): " + err.Error())
 		return
 	}
 
-	isRunning, err := podonwin.IsProcessRunning(val)
+	isRunning, err := cross_win.IsProcessRunning(val)
 	if err != nil {
 		fmt.Println("Error seeing if wire-pod is running (isprocessrunning): " + err.Error())
 		return
