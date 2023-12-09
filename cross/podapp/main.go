@@ -133,13 +133,13 @@ func StartWirePod(crossOS all.OSFuncs) {
 }
 
 func ExitProgram(code int) {
-	systray.Quit()
 	cross.OnExit()
+	systray.Quit()
 	os.Exit(code)
 }
 
 func onExit() {
-	ExitProgram(0)
+	os.Exit(0)
 }
 
 func onReady() {
@@ -159,7 +159,9 @@ func onReady() {
 	fmt.Println(filepath.Join(cross.ResourcesPath(), "icons/ico") + "/pod24x24.ico")
 
 	systray.SetIcon(systrayIcon)
-	systray.SetTitle("WirePod")
+	if runtime.GOOS == "windows" {
+		systray.SetTitle("WirePod")
+	}
 	systray.SetTooltip("WirePod is starting...")
 	mQuit := systray.AddMenuItem("Quit", "Quit WirePod")
 	mBrowse := systray.AddMenuItem("Web interface", "Open web UI")
