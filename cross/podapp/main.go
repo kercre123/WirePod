@@ -9,7 +9,6 @@ import (
 	"runtime/debug"
 	"strconv"
 
-	"fyne.io/fyne/v2"
 	"github.com/getlantern/systray"
 	all "github.com/kercre123/WirePod/cross/all"
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
@@ -20,8 +19,6 @@ import (
 )
 
 // this directory contains code which compiled a single program for end users. gui elements are implemented.
-
-var fyneApp fyne.App
 
 var cross all.OSFuncs
 

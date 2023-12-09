@@ -23,12 +23,25 @@ func (w *MacOS) Init() error {
 	return nil
 }
 
+func MakeDefaultConfig() all.WPConfig {
+	var conf all.WPConfig
+	execu, _ := os.Executable()
+	conf.InstallPath = filepath.Dir(execu) + "/../Frameworks"
+	conf.RunAtStartup = false
+	conf.NeedsRestart = false
+	conf.Version = "v0.0.1"
+	conf.WSPort = "8080"
+	return conf
+}
+
 func (w *MacOS) ReadConfig() (all.WPConfig, error) {
 	coDir, _ := os.UserConfigDir()
 	confFile := filepath.Join(coDir, "wire-pod") + "/wire-pod-conf.json"
 	file, err := os.ReadFile(confFile)
 	if err != nil {
-		return all.WPConfig{}, err
+		conf := MakeDefaultConfig()
+		w.WriteConfig(conf)
+		return conf, nil
 	}
 	var conf all.WPConfig
 	json.Unmarshal(file, &conf)
