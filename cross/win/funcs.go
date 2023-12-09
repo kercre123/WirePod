@@ -111,6 +111,15 @@ func (w *Windows) KillExistingPod() error {
 	return nil
 }
 
+func (w *Windows) Hostname() string {
+	hostname, _ := os.Hostname()
+	return hostname
+}
+
+func (w *Windows) ResourcesPath() string {
+	return "./"
+}
+
 func (w *Windows) OnExit() {
 	conf, err := w.ReadConfig()
 	if err != nil {

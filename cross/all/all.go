@@ -36,5 +36,7 @@ type OSFuncs interface {
 	IsPodAlreadyRunning() bool
 	IsPIDProcessRunning(int) (bool, error)
 	KillExistingPod() error
+	ResourcesPath() string
+	Hostname() string
 	OnExit()
 }

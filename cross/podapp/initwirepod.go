@@ -47,7 +47,7 @@ func NeedsSetupMsg() {
 	go func() {
 		err := zenity.Info(
 			getNeedsSetupMsg(),
-			zenity.Icon(mBoxIcon),
+			zenity.Icon(mBoxIcon()),
 			zenity.Title(mBoxTitle),
 			zenity.ExtraButton("Open browser"),
 			zenity.OKLabel("OK"),
@@ -173,7 +173,7 @@ func IfFileExist(name string) bool {
 }
 
 func CheckHostname() {
-	hostname, _ := os.Hostname()
+	hostname := cross.Hostname()
 	confDir, _ := os.UserConfigDir()
 	warnFile := filepath.Join(confDir, vars.PodName) + "/NoPodWarn"
 	if hostname != "escapepod" && vars.APIConfig.Server.EPConfig && !IfFileExist(warnFile) {
@@ -287,7 +287,7 @@ func StartChipper(fromInit bool) {
 	if fromInit && !discrete {
 		go zenity.Info(
 			mBoxSuccess,
-			zenity.Icon(mBoxIcon),
+			zenity.Icon(mBoxIcon()),
 			zenity.Title(mBoxTitle),
 		)
 	}

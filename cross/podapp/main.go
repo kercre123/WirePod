@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
 	"github.com/getlantern/systray"
 	all "github.com/kercre123/WirePod/cross/all"
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
@@ -32,10 +31,13 @@ var mBoxTitle = "WirePod"
 var mBoxError = `There was an error starting WirePod: `
 var mBoxAlreadyRunning = "WirePod is already running. You must quit that instance before starting another one. Exiting."
 var mBoxSuccess = `WirePod has started successfully! It is now running in the background and can be managed in the system tray.`
-var mBoxIcon = "./icons/png/podfull.png"
+
+func mBoxIcon() string {
+	return filepath.Join(cross.ResourcesPath(), "icons/png/podfull.png")
+}
 
 func getNeedsSetupMsg() string {
-	return `Wire-pod is now running in the background. You must set it up by heading to http://` + botsetup.GetOutboundIP().String() + `:` + vars.WebPort + ` in a browser.`
+	return `WirePod is now running in the background. You must set it up by heading to http://` + botsetup.GetOutboundIP().String() + `:` + vars.WebPort + ` in a browser.`
 }
 
 func checkIfRestartNeeded() bool {
@@ -130,11 +132,7 @@ func StartWirePod(crossOS all.OSFuncs) {
 		os.Setenv("WEBSERVER_PORT", conf.WSPort)
 	}
 
-	go systray.Run(onReady, onExit)
-	// for the about window to work
-	// fine since everything uses `os.Exit()` to exit the program
-	fyneApp = app.New()
-	fyneApp.Run()
+	systray.Run(onReady, onExit)
 }
 
 func ExitProgram(code int) {
@@ -153,7 +151,7 @@ func onReady() {
 	os.Setenv("STT_SERVICE", "vosk")
 	os.Setenv("DEBUG_LOGGING", "true")
 
-	systrayIcon, err := os.ReadFile("./icons/ico/pod24x24.ico")
+	systrayIcon, err := os.ReadFile(filepath.Join(cross.ResourcesPath(), "icons/ico/pod24x24.ico"))
 	if err != nil {
 		zenity.Error(
 			"Error, could not load systray icon. Something is wrong with the program directory. Exiting.",
@@ -168,7 +166,15 @@ func onReady() {
 	mQuit := systray.AddMenuItem("Quit", "Quit WirePod")
 	mBrowse := systray.AddMenuItem("Web interface", "Open web UI")
 	mConfig := systray.AddMenuItem("Config folder", "Open config folder in case you need to. The web UI should have everything you need.")
+	mStartup := systray.AddMenuItem("Run at startup", "")
 	mAbout := systray.AddMenuItem("About", "About WirePod")
+
+	conf, _ := cross.ReadConfig()
+	if conf.RunAtStartup {
+		mStartup.Check()
+	} else {
+		mStartup.Uncheck()
+	}
 
 	go func() {
 		for {
@@ -176,7 +182,7 @@ func onReady() {
 			case <-mQuit.ClickedCh:
 				zenity.Info(
 					"WirePod will now exit.",
-					zenity.Icon(mBoxIcon),
+					zenity.Icon(mBoxIcon()),
 					zenity.Title(mBoxTitle),
 				)
 				ExitProgram(0)
@@ -186,7 +192,17 @@ func onReady() {
 				conf, _ := os.UserConfigDir()
 				go openFileExplorer(filepath.Join(conf, vars.PodName))
 			case <-mAbout.ClickedCh:
-				ShowAbout(fyneApp)
+				zenity.Info("WirePod is an Escape Pod alternative which is able to get any Anki/DDL Vector robot setup and working with voice commands.",
+					zenity.Icon(mBoxIcon()),
+					zenity.Title("WirePod"))
+			case <-mStartup.ClickedCh:
+				if mStartup.Checked() {
+					mStartup.Uncheck()
+					cross.RunPodAtStartup(true)
+				} else {
+					mStartup.Check()
+					cross.RunPodAtStartup(false)
+				}
 			}
 		}
 	}()
