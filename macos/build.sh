@@ -91,7 +91,8 @@ echo "</plist>" >> $PLISTFILE
 
 export CHPATH="../wire-pod/chipper"
 export CLPATH="../wire-pod/vector-cloud"
-cp -r ../icons/ ${RESOURCES}
+cp -r ../icons/* ${RESOURCES}
+cp -r ../icons ${RESOURCES}/
 cp ${PODLIBS}/opus/lib/libopus.0.dylib ${FRAMEWORKS}    
 cp ${PODLIBS}/vosk/libvosk.dylib ${FRAMEWORKS}
 cp ${CHPATH}/weather-map.json ${CHIPPER}
