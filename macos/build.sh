@@ -1,17 +1,19 @@
 #!/bin/bash
 
-sudo -u $SUDO_USER brew install autoconf automake libtool create-dmg
+set -e
+
+brew install autoconf automake libtool create-dmg go wget pkg-config
 
 export ORIGDIR="$(pwd)"
 export PODLIBS="${ORIGDIR}/libs"
 
 export GOOS=darwin
-if [[ "$(uname -a)" == "x86_64" ]]; then
+if [[ "$(uname -m)" == "x86_64" ]]; then
     export GOARCH=amd64
-else if [[ "$(uname -a)" == "aarch64" ]]; then
+elif [[ "$(uname -m)" == "aarch64" ]]; then
     export GOARCH=arm64
 else
-    echo "Invalid architecture: $(uname -a)"
+    echo "Invalid architecture: $(uname -m)"
     exit 1
 fi
 
@@ -40,8 +42,16 @@ fi
 export CGO_ENABLED=1
 export CGO_LDFLAGS="-L${PODLIBS}/opus/lib -L${PODLIBS}/vosk"
 export CGO_CFLAGS="-I${PODLIBS}/opus/include -I${PODLIBS}/vosk"
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${PODLIBS}/opus/lib/pkgconfig
 
 rm -rf target
+
+APPDIR=target/app/WirePod.app/Contents
+PLISTFILE=${APPDIR}/Info.plist
+RESOURCES=${APPDIR}/Resources
+FRAMEWORKS=${APPDIR}/Frameworks
+CHIPPER=${APPDIR}/Frameworks/chipper
+VECTOR_CLOUD=${APPDIR}/Frameworks/vector-cloud
 
 mkdir -p ${RESOURCES}
 mkdir -p ${FRAMEWORKS}
@@ -52,13 +62,6 @@ go build \
 -tags nolibopusfile \
 -o target/app/WirePod.app/Contents/MacOS/WirePod \
 ./cmd
-
-APPDIR=target/app/WirePod.app/Contents
-PLISTFILE=${APPDIR}/Info.plist
-RESOURCES=${APPDIR}/Resources
-FRAMEWORKS=${APPDIR}/Frameworks
-CHIPPER=${APPDIR}/Frameworks/chipper
-VECTOR_CLOUD=${APPDIR}/Frameworks/vector-cloud
 
 echo "<?xml version="1.0" encoding="UTF-8"?>" > $PLISTFILE
 echo "<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">" >> $PLISTFILE
@@ -88,7 +91,7 @@ echo "</plist>" >> $PLISTFILE
 
 export CHPATH="../wire-pod/chipper"
 export CLPATH="../wire-pod/vector-cloud"
-cp -r icons/ ${RESOURCES}
+cp -r ../icons/ ${RESOURCES}
 cp ${PODLIBS}/opus/lib/libopus.0.dylib ${FRAMEWORKS}    
 cp ${PODLIBS}/vosk/libvosk.dylib ${FRAMEWORKS}
 cp ${CHPATH}/weather-map.json ${CHIPPER}

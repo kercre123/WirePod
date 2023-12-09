@@ -16,22 +16,22 @@ import (
 	"github.com/ncruces/zenity"
 )
 
-var mBoxTitle = "wire-pod"
-var mBoxError = "There was an error starting wire-pod:"
-var mBoxAlreadyRunning = "Wire-pod is already running. You must quit that instance before starting another one. Exiting."
-var mBoxSuccess = "Wire-pod has started successfully! It is now running in the background and can be managed in the system tray."
+var mBoxTitle = "WirePod"
+var mBoxError = "There was an error starting WirePod:"
+var mBoxAlreadyRunning = "WirePod is already running. You must quit that instance before starting another one. Exiting."
+var mBoxSuccess = "WirePod has started successfully! It is now running in the background and can be managed in the system tray."
 
 func mBoxIcon() string {
 	if runtime.GOOS == "windows" {
 		return "./icons/start-up-full.png"
 	} else {
 		appPath, _ := os.Executable()
-		return filepath.Dir(appPath) + "/../Resources/start-up-full.png"
+		return filepath.Dir(appPath) + "/../Resources/png/podfull.png"
 	}
 }
 
 func getNeedsSetupMsg() string {
-	return `wire-pod is now running in the background. You must set it up by heading to http://` + botsetup.GetOutboundIP().String() + `:` + vars.WebPort + ` in a browser.`
+	return `WirePod is now running in the background. You must set it up by heading to http://` + botsetup.GetOutboundIP().String() + `:` + vars.WebPort + ` in a browser.`
 }
 
 func main() {
@@ -41,9 +41,9 @@ func main() {
 			path := filepath.Join(conf, "dump.txt")
 			os.WriteFile(path, []byte(fmt.Sprint(r)), 0777)
 			fmt.Printf("panic!: %v\n", r)
-			zenity.Error("wire-pod has crashed. dump located in " + path + ". Exiting.",
+			zenity.Error("WirePod has crashed. dump located in " + path + ". Exiting.",
 				zenity.ErrorIcon,
-				zenity.Title("wire-pod crash :("))
+				zenity.Title("WirePod crash :("))
 			ExitProgram(1)
 		}
 	}()
@@ -65,7 +65,7 @@ func onReady() {
 	os.Setenv("DEBUG_LOGGING", "true")
 	// os.Setenv("GGML_METAL_PATH_RESOURCES", filepath.Dir(appPath) + "/../Frameworks/chipper/whisper.cpp")
 
-	systrayIcon, err := os.ReadFile(filepath.Dir(appPath) + "/../Resources/start-up-24x24.ico")
+	systrayIcon, err := os.ReadFile(filepath.Dir(appPath) + "/../Resources/ico/pod24x24.ico")
 	if err != nil {
 		zenity.Error(
 			"Error, could not load systray icon. Exiting.",
@@ -75,14 +75,14 @@ func onReady() {
 	}
 
 	systray.SetIcon(systrayIcon)
-	systray.SetTooltip("wire-pod is starting...")
-	mAbout := systray.AddMenuItem("wire-pod", "")
+	systray.SetTooltip("WirePod is starting...")
+	mAbout := systray.AddMenuItem("WirePod", "")
 	systray.AddSeparator()
 	mBrowse := systray.AddMenuItem("Web Interface", "Open web UI")
 	mConfig := systray.AddMenuItem("Config Folder", "Open config folder in case you need to. The web UI should have everything you need.")
 	mStartup := systray.AddMenuItem("Run at startup", "")
 	systray.AddSeparator()
-	mQuit := systray.AddMenuItem("Quit", "Quit wire-pod")
+	mQuit := systray.AddMenuItem("Quit", "Quit WirePod")
 
 	if IsPodRunningAtStartup() {
 		mStartup.Check()
@@ -94,9 +94,9 @@ func onReady() {
 		for {
 			select {
 			case <-mAbout.ClickedCh:
-				zenity.Info("wire-pod is an Escape Pod alternative which is able to get any Anki/DDL Vector robot setup and working with voice commands.",
+				zenity.Info("WirePod is an Escape Pod alternative which is able to get any Anki/DDL Vector robot setup and working with voice commands.",
 				zenity.Icon(mBoxIcon()),
-				zenity.Title("wire-pod"))
+				zenity.Title("WirePod"))
 
 			case <-mBrowse.ClickedCh:
 				go openBrowser("http://" + botsetup.GetOutboundIP().String() + ":" + vars.WebPort)
@@ -130,13 +130,13 @@ func RunPodAtStartup() {
 		os.Mkdir(launchAgentsDir, 0777)
 	}
 	executable, _ := os.Executable()
-	err := os.WriteFile(launchAgentsDir + "/wire-pod.agent.plist", []byte(`
+	err := os.WriteFile(launchAgentsDir + "/WirePod.agent.plist", []byte(`
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>wire-pod.agent</string>
+	<string>WirePod.agent</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>` + executable +  `</string>
@@ -152,7 +152,7 @@ func RunPodAtStartup() {
 
 func DontRunPodAtStartup() {
 	homeDir, _ := os.UserHomeDir()
-	err := os.Remove(filepath.Join(homeDir, "/Library/LaunchAgents/wire-pod.agent.plist"))
+	err := os.Remove(filepath.Join(homeDir, "/Library/LaunchAgents/WirePod.agent.plist"))
 	if err != nil {
 		go zenity.Error("Error disabling run at startup: " + err.Error(), zenity.Title(mBoxTitle))
 	}
@@ -160,7 +160,7 @@ func DontRunPodAtStartup() {
 
 func IsPodRunningAtStartup() bool {
 	homeDir, _ := os.UserHomeDir()
-	return IfFileExist(filepath.Join(homeDir, "/Library/LaunchAgents/wire-pod.agent.plist"))
+	return IfFileExist(filepath.Join(homeDir, "/Library/LaunchAgents/WirePod.agent.plist"))
 }
 
 func openBrowser(url string) {

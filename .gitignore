@@ -2,7 +2,8 @@
 /windows/*.exe
 /windows/opus
 /windows/ogg
-/macos/opus
+/macos/libs
+/macos/target
 /macos/ogg
 /windows/tmp
 /windows/libs
