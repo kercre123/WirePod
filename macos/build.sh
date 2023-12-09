@@ -5,6 +5,16 @@ sudo -u $SUDO_USER brew install autoconf automake libtool create-dmg
 export ORIGDIR="$(pwd)"
 export PODLIBS="${ORIGDIR}/libs"
 
+export GOOS=darwin
+if [[ "$(uname -a)" == "x86_64" ]]; then
+    export GOARCH=amd64
+else if [[ "$(uname -a)" == "aarch64" ]]; then
+    export GOARCH=arm64
+else
+    echo "Invalid architecture: $(uname -a)"
+    exit 1
+fi
+
 if [[ ! -d ${PODLIBS}/opus ]]; then
     echo "opus directory doesn't exist. cloning and building"
     mkdir -p ${PODLIBS}
@@ -27,24 +37,23 @@ if [[ ! -d ${PODLIBS}/vosk ]]; then
     cd ${ORIGDIR}
 fi
 
-export GOOS=darwin
-export GOARCH=arm64
-
 export CGO_ENABLED=1
 export CGO_LDFLAGS="-L${PODLIBS}/opus/lib -L${PODLIBS}/vosk"
 export CGO_CFLAGS="-I${PODLIBS}/opus/include -I${PODLIBS}/vosk"
 
 rm -rf target
-cd ..
+
+mkdir -p ${RESOURCES}
+mkdir -p ${FRAMEWORKS}
+mkdir -p ${CHIPPER}
+mkdir -p ${VECTOR_CLOUD}/build
 
 go build \
 -tags nolibopusfile \
--o macos/target/app/wire-pod.app/Contents/MacOS/wire-pod \
-./cmd/macos
+-o target/app/WirePod.app/Contents/MacOS/WirePod \
+./cmd
 
-cd macos
-
-APPDIR=target/app/wire-pod.app/Contents
+APPDIR=target/app/WirePod.app/Contents
 PLISTFILE=${APPDIR}/Info.plist
 RESOURCES=${APPDIR}/Resources
 FRAMEWORKS=${APPDIR}/Frameworks
@@ -56,13 +65,13 @@ echo "<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.
 echo "<plist version="1.0">" >> $PLISTFILE
 echo "<dict>" >> $PLISTFILE
 echo "  <key>CFBundleGetInfoString</key>" >> $PLISTFILE
-echo "  <string>wire-pod</string>" >> $PLISTFILE
+echo "  <string>WirePod</string>" >> $PLISTFILE
 echo "  <key>CFBundleExecutable</key>" >> $PLISTFILE
-echo "  <string>wire-pod</string>" >> $PLISTFILE
+echo "  <string>WirePod</string>" >> $PLISTFILE
 echo "  <key>CFBundleIdentifier</key>" >> $PLISTFILE
 echo "  <string>io.github.kercre123</string>" >> $PLISTFILE
 echo "  <key>CFBundleName</key>" >> $PLISTFILE
-echo "  <string>wire-pod</string>" >> $PLISTFILE
+echo "  <string>WirePod</string>" >> $PLISTFILE
 echo "  <key>CFBundleIconFile</key>" >> $PLISTFILE
 echo "  <string>icon.icns</string>" >> $PLISTFILE
 echo "  <key>CFBundleVersion</key>" >> $PLISTFILE
@@ -77,39 +86,36 @@ echo "  <key>LSUIElement</key><true/>" >> $PLISTFILE
 echo "</dict>" >> $PLISTFILE
 echo "</plist>" >> $PLISTFILE
 
-mkdir -p ${RESOURCES}
-mkdir -p ${FRAMEWORKS}
-mkdir -p ${CHIPPER}
-mkdir -p ${VECTOR_CLOUD}/build
-
+export CHPATH="../wire-pod/chipper"
+export CLPATH="../wire-pod/vector-cloud"
 cp -r icons/ ${RESOURCES}
 cp ${PODLIBS}/opus/lib/libopus.0.dylib ${FRAMEWORKS}    
 cp ${PODLIBS}/vosk/libvosk.dylib ${FRAMEWORKS}
-cp ../weather-map.json ${CHIPPER}
-cp -r ../intent-data ${CHIPPER}
-cp -r ../webroot ${CHIPPER}
-cp -r ../epod ${CHIPPER}
-cp ../../vector-cloud/build/vic-cloud ${VECTOR_CLOUD}/build/
-cp ../../vector-cloud/pod-bot-install.sh ${VECTOR_CLOUD}
+cp ${CHPATH}/weather-map.json ${CHIPPER}
+cp -r ${CHPATH}/intent-data ${CHIPPER}
+cp -r ${CHPATH}/webroot ${CHIPPER}
+cp -r ${CHPATH}/epod ${CHIPPER}
+cp ${CLPATH}/build/vic-cloud ${VECTOR_CLOUD}/build/
+cp ${CLPATH}/pod-bot-install.sh ${VECTOR_CLOUD}
 
 sudo install_name_tool \
 -change ${PODLIBS}/opus/lib/libopus.0.dylib \
 @executable_path/../Frameworks/libopus.0.dylib \
-${APPDIR}/MacOS/wire-pod
+${APPDIR}/MacOS/WirePod
 
 sudo install_name_tool \
 -change libvosk.dylib \
 @executable_path/../Frameworks/libvosk.dylib \
-${APPDIR}/MacOS/wire-pod
+${APPDIR}/MacOS/WirePod
 
 mkdir target/installer
 sudo create-dmg \
---volname "wire-pod Installer" \
+--volname "WirePod Installer" \
 --window-size 800 450 \
 --icon-size 100 \
---icon "wire-pod.app" 200 200 \
---hide-extension "wire-pod.app" \
+--icon "WirePod.app" 200 200 \
+--hide-extension "WirePod.app" \
 --app-drop-link 600 200 \
 --hdiutil-quiet \
-target/installer/wire-pod-${GOOS}-${GOARCH}.dmg \
+target/installer/WirePod-${GOOS}-${GOARCH}.dmg \
 target/app/
