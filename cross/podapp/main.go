@@ -30,7 +30,7 @@ var mBoxAlreadyRunning = "WirePod is already running. You must quit that instanc
 var mBoxSuccess = `WirePod has started successfully! It is now running in the background and can be managed in the system tray.`
 
 func mBoxIcon() string {
-	return filepath.Join(cross.ResourcesPath(), "icons/png/podfull.png")
+	return filepath.Join(cross.ResourcesPath(), "icons/png/"+"podfull.png")
 }
 
 func getNeedsSetupMsg() string {
@@ -148,7 +148,7 @@ func onReady() {
 	os.Setenv("STT_SERVICE", "vosk")
 	os.Setenv("DEBUG_LOGGING", "true")
 
-	systrayIcon, err := os.ReadFile(filepath.Join(cross.ResourcesPath(), "icons/ico/pod24x24.ico"))
+	systrayIcon, err := os.ReadFile(filepath.Join(cross.ResourcesPath(), "icons/ico/") + " pod24x24.ico")
 	if err != nil {
 		zenity.Error(
 			"Error, could not load systray icon. Something is wrong with the program directory. Exiting.",
