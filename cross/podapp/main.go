@@ -148,7 +148,7 @@ func onReady() {
 	os.Setenv("STT_SERVICE", "vosk")
 	os.Setenv("DEBUG_LOGGING", "true")
 
-	systrayIcon, err := os.ReadFile(filepath.Join(cross.ResourcesPath(), "icons/ico/") + "pod24x24.ico")
+	systrayIcon, err := os.ReadFile(filepath.Join(cross.ResourcesPath(), "icons/ico") + "/pod24x24.ico")
 	if err != nil {
 		zenity.Error(
 			"Error, could not load systray icon. Something is wrong with the program directory. Exiting.",
@@ -156,6 +156,7 @@ func onReady() {
 		)
 		os.Exit(1)
 	}
+	fmt.Println(filepath.Join(cross.ResourcesPath(), "icons/ico") + "/pod24x24.ico")
 
 	systray.SetIcon(systrayIcon)
 	systray.SetTitle("WirePod")
