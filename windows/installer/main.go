@@ -75,21 +75,21 @@ func ExecuteDetached(program string) error {
 }
 
 func PostInstall_RestartReq(myApp fyne.App, is InstallSettings) {
-	window := myApp.NewWindow("wire-pod installer")
+	window := myApp.NewWindow("WirePod installer")
 	window.Resize(fyne.Size{Width: 600, Height: 100})
 	window.SetIcon(icon)
 	window.CenterOnScreen()
 	window.SetMaster()
 
-	finished := widget.NewCard("wire-pod installer", "wire-pod has finished installing!", container.NewWithoutLayout())
+	finished := widget.NewCard("WirePod installer", "WirePod has finished installing!", container.NewWithoutLayout())
 
-	tellRestart := widget.NewRichTextWithText("You must restart your computer before you start wire-pod, otherwise Vector won't be able to communicate with it.")
+	tellRestart := widget.NewRichTextWithText("You must restart your computer before you start WirePod, otherwise Vector won't be able to communicate with it.")
 
 	var clarifyWhenPodStarts *widget.RichText
 	if is.RunAtStartup {
-		clarifyWhenPodStarts = widget.NewRichTextWithText("wire-pod will automatically start after you reboot.")
+		clarifyWhenPodStarts = widget.NewRichTextWithText("WirePod will automatically start after you reboot.")
 	} else {
-		clarifyWhenPodStarts = widget.NewRichTextWithText("You must manually run wire-pod after restart because you chose for it not to automatically start at login. This can be changed in wire-pod's 'About' menu.")
+		clarifyWhenPodStarts = widget.NewRichTextWithText("You must manually run WirePod after restart because you chose for it not to automatically start at login. This can be changed in WirePod's 'About' menu.")
 	}
 
 	clarifyWhenPodStarts.Wrapping = fyne.TextWrapWord
@@ -99,7 +99,7 @@ func PostInstall_RestartReq(myApp fyne.App, is InstallSettings) {
 	})
 
 	rebootLaterButton := widget.NewButton("Reboot Later", func() {
-		cross_win.UpdateRegistryValueString(cross_win.SoftwareKey, "RestartNeeded", "true")
+		cross_win.UpdateRegistryValueString(cross_win.SoftwareKey, "NeedsRestart", "true")
 		os.Exit(0)
 	})
 
@@ -117,15 +117,15 @@ func PostInstall_RestartReq(myApp fyne.App, is InstallSettings) {
 
 func PostInstall(myApp fyne.App, is InstallSettings) {
 	var shouldStartPod bool = true
-	window := myApp.NewWindow("wire-pod installer")
+	window := myApp.NewWindow("WirePod installer")
 	window.Resize(fyne.Size{Width: 600, Height: 100})
 	window.SetIcon(icon)
 	window.CenterOnScreen()
 	window.SetMaster()
 
-	finished := widget.NewCard("wire-pod installer", "wire-pod has finished installing!", container.NewWithoutLayout())
+	finished := widget.NewCard("WirePod installer", "WirePod has finished installing!", container.NewWithoutLayout())
 
-	startpod := widget.NewCheck("Start wire-pod after exit?", func(checked bool) {
+	startpod := widget.NewCheck("Start WirePod after exit?", func(checked bool) {
 		shouldStartPod = checked
 	})
 
@@ -149,13 +149,13 @@ func PostInstall(myApp fyne.App, is InstallSettings) {
 }
 
 func DoInstall(myApp fyne.App, is InstallSettings) {
-	window := myApp.NewWindow("wire-pod installer")
+	window := myApp.NewWindow("WirePod installer")
 	window.Resize(fyne.Size{Width: 600, Height: 100})
 	window.CenterOnScreen()
 	window.SetIcon(icon)
 	window.SetMaster()
 	bar := widget.NewProgressBar()
-	card := widget.NewCard("Installing wire-pod", "Starting installation...",
+	card := widget.NewCard("Installing WirePod", "Starting installation...",
 		container.NewWithoutLayout())
 
 	window.SetContent(container.NewVBox(
@@ -181,11 +181,11 @@ func DoInstall(myApp fyne.App, is InstallSettings) {
 	}()
 	err := InstallWirePod(is)
 	if err != nil {
-		fmt.Println("error installing wire-pod: " + err.Error())
+		fmt.Println("error installing WirePod: " + err.Error())
 		zenity.Error(
-			"Error installing wire-pod, will revert installation and quit: "+err.Error(),
+			"Error installing WirePod, will revert installation and quit: "+err.Error(),
 			zenity.ErrorIcon,
-			zenity.Title("wire-pod installer"),
+			zenity.Title("WirePod installer"),
 		)
 		cross_win.DeleteEverythingFromRegistry()
 		os.Exit(1)
@@ -199,7 +199,7 @@ func DoInstall(myApp fyne.App, is InstallSettings) {
 }
 
 func GetSetNameEscapepod(myApp fyne.App, is InstallSettings) {
-	window := myApp.NewWindow("wire-pod installer")
+	window := myApp.NewWindow("WirePod installer")
 	window.SetIcon(icon)
 	window.CenterOnScreen()
 	window.SetMaster()
@@ -207,12 +207,12 @@ func GetSetNameEscapepod(myApp fyne.App, is InstallSettings) {
 	content := container.NewVBox()
 
 	//content.Resize(fyne.NewSize(600, 200))
-	prefInfo := widget.NewCard("wire-pod installer",
+	prefInfo := widget.NewCard("WirePod installer",
 		"Your computer's hostname is not `escapepod`.",
 		container.NewWithoutLayout())
 	content.Add(prefInfo)
 
-	morePrefInfo := widget.NewRichTextWithText("This means regular Vector robots will not be able to communicate with wire-pod unless you have a special network configuration or set it to `escapepod`.")
+	morePrefInfo := widget.NewRichTextWithText("This means regular Vector robots will not be able to communicate with WirePod unless you have a special network configuration or set it to `escapepod`.")
 	morePrefInfo.Wrapping = fyne.TextWrapWord
 	content.Add(morePrefInfo)
 
@@ -233,7 +233,7 @@ func GetSetNameEscapepod(myApp fyne.App, is InstallSettings) {
 	})
 	noButton := widget.NewButton("No", func() {
 		is.SetHostnameEpod = false
-		cross_win.DeleteRegistryValue(cross_win.SoftwareKey, "RestartNeeded")
+		cross_win.DeleteRegistryValue(cross_win.SoftwareKey, "NeedsRestart")
 		window.Hide()
 		DoInstall(myApp, is)
 	})
@@ -260,12 +260,12 @@ func ValidateWebPort(port string) bool {
 
 func GetPreferences(myApp fyne.App) {
 	var is InstallSettings
-	window := myApp.NewWindow("wire-pod installer")
+	window := myApp.NewWindow("WirePod installer")
 	window.SetIcon(icon)
 	window.Resize(fyne.Size{Width: 600, Height: 200})
 	window.CenterOnScreen()
 	window.SetMaster()
-	launchOnStartup := widget.NewCheck("Automatically launch wire-pod after login?", func(checked bool) {
+	launchOnStartup := widget.NewCheck("Automatically launch WirePod after login?", func(checked bool) {
 		is.RunAtStartup = checked
 	})
 
@@ -295,13 +295,13 @@ func GetPreferences(myApp fyne.App) {
 			zenity.Warning(
 				"The directory you have provided ("+is.Where+") is invalid. Please provide a valid path or use the default one.",
 				zenity.WarningIcon,
-				zenity.Title("wire-pod installer"),
+				zenity.Title("WirePod installer"),
 			)
 		} else if !ValidateWebPort(is.WebPort) {
 			zenity.Warning(
 				"The web port you have provided ("+is.WebPort+") is invalid. It must be an integer between 1000-65353.",
 				zenity.WarningIcon,
-				zenity.Title("wire-pod installer"),
+				zenity.Title("WirePod installer"),
 			)
 		} else {
 			window.Hide()
@@ -314,7 +314,7 @@ func GetPreferences(myApp fyne.App) {
 		}
 	})
 
-	firstCard := widget.NewCard("wire-pod installer", "This program will install wire-pod with the following settings.", container.NewWithoutLayout())
+	firstCard := widget.NewCard("WirePod installer", "This program will install wire-pod with the following settings.", container.NewWithoutLayout())
 
 	window.SetContent(container.NewVBox(
 		firstCard,
@@ -377,13 +377,13 @@ func main() {
 	fmt.Println("Initing registry")
 	cross_win.InitReg()
 	fmt.Println("Getting tag from GitHub")
-	tag, err := GetLatestReleaseTag("kercre123", "wire-pod")
+	tag, err := GetLatestReleaseTag("kercre123", "WirePod")
 	if err != nil {
 		fmt.Println("Error getting: " + err.Error())
 		zenity.Error(
 			"Error getting latest GitHub tag from GitHub, exiting: "+err.Error(),
 			zenity.ErrorIcon,
-			zenity.Title("wire-pod installer"),
+			zenity.Title("WirePod installer"),
 		)
 		os.Exit(0)
 	}

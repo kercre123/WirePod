@@ -65,6 +65,7 @@ func UpdateSoftwareRegistry(is InstallSettings) {
 	}
 	cross_win.UpdateRegistryValueString(cross_win.SoftwareKey, "PodVersion", GitHubTag)
 	cross_win.UpdateRegistryValueString(cross_win.SoftwareKey, "WebPort", is.WebPort)
+	cross_win.UpdateRegistryValueString(cross_win.SoftwareKey, "RunAtStartup", fmt.Sprint(is.RunAtStartup))
 }
 
 func RunPodAtStartup(is InstallSettings) {

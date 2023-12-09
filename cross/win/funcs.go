@@ -87,11 +87,7 @@ func (w *Windows) IsPodAlreadyRunning() bool {
 	if conf.LastRunningPID == 0 {
 		return false
 	}
-	isRunning, err := IsProcessRunning(conf.LastRunningPID)
-	if err != nil {
-		fmt.Println("syscall error")
-		panic(err)
-	}
+	isRunning, _ := IsProcessRunning(conf.LastRunningPID)
 	return isRunning
 }
 

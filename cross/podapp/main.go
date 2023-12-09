@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 
 	"fyne.io/fyne/v2"
@@ -54,14 +55,17 @@ func checkIfRestartNeeded() bool {
 }
 
 // the actual entrypoint function!
-func StartWirePod(cross all.OSFuncs) {
+func StartWirePod(crossOS all.OSFuncs) {
+	cross = crossOS
 
 	defer func() {
 		if r := recover(); r != nil {
 			conf, _ := os.UserConfigDir()
-			os.WriteFile(filepath.Join(conf, "wire-pod", "dump.txt"), []byte(fmt.Sprint(r)), 0777)
+			dumpFile := filepath.Join(conf, "wire-pod", "dump.txt")
+			os.MkdirAll(filepath.Join(conf, "wire-pod"), 0777)
+			os.WriteFile(dumpFile, []byte(fmt.Sprint(r)+"\n\n\n"+string(debug.Stack())), 0777)
 			fmt.Printf("panic!: %v\n", r)
-			zenity.Error("wire-pod has crashed. dump located in os.UserConfigDir()/wire-pod/dump.txt. exiting",
+			zenity.Error("wire-pod has crashed. dump located in "+dumpFile+". exiting",
 				zenity.ErrorIcon,
 				zenity.Title("wire-pod crash :("))
 			ExitProgram(1)
@@ -149,10 +153,10 @@ func onReady() {
 	os.Setenv("STT_SERVICE", "vosk")
 	os.Setenv("DEBUG_LOGGING", "true")
 
-	systrayIcon, err := os.ReadFile("./icons/pod24x24.ico")
+	systrayIcon, err := os.ReadFile("./icons/ico/pod24x24.ico")
 	if err != nil {
 		zenity.Error(
-			"Error, could not load systray icon. Exiting.",
+			"Error, could not load systray icon. Something is wrong with the program directory. Exiting.",
 			zenity.Title(mBoxTitle),
 		)
 		os.Exit(1)
