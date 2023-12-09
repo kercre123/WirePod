@@ -1,7 +1,13 @@
 # WirePod
 
-This repo will contain all cross-platform code for wire-pod.
+Cross-platform code and resources for [wire-pod](https://github.com/kercre123/wire-pod).
 
-WirePod - code and resources to build user-friendly applications and installers. will also host releases for Windows, macOS, and Linux
+-  wire-pod = actual server code
+-  WirePod = code to create user-installable packages of wire-pod
 
-wire-pod - the actual voice server code
+## Support
+
+-  macOS (arm64, amd64)
+-  Windows 10/11 (amd64)
+
+-  For Linux, use the instructions in wire-pod's wiki.
