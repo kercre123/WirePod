@@ -57,8 +57,6 @@ func checkIfRestartNeeded() bool {
 func StartWirePod(crossOS all.OSFuncs) {
 	cross = crossOS
 
-	fmt.Println(filepath.Join(cross.ResourcesPath(), "icons/png/"+"podfull.png"))
-
 	defer func() {
 		if r := recover(); r != nil {
 			conf, _ := os.UserConfigDir()
@@ -122,7 +120,6 @@ func StartWirePod(crossOS all.OSFuncs) {
 	}
 
 	err = os.Chdir(filepath.Join(conf.InstallPath, "chipper"))
-	fmt.Println(filepath.Join(cross.ResourcesPath(), "icons/png/"+"podfull.png"))
 	fmt.Println("Working directory: " + conf.InstallPath + "/chipper")
 	if err != nil {
 		ErrMsg(fmt.Errorf("error setting runtime directory to " + conf.InstallPath + "/chipper"))
@@ -151,7 +148,7 @@ func onReady() {
 	os.Setenv("STT_SERVICE", "vosk")
 	os.Setenv("DEBUG_LOGGING", "true")
 
-	systrayIcon, err := os.ReadFile(filepath.Join(cross.ResourcesPath(), "icons/ico/") + " pod24x24.ico")
+	systrayIcon, err := os.ReadFile(filepath.Join(cross.ResourcesPath(), "icons/ico/") + "pod24x24.ico")
 	if err != nil {
 		zenity.Error(
 			"Error, could not load systray icon. Something is wrong with the program directory. Exiting.",
