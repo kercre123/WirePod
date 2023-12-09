@@ -122,6 +122,7 @@ func StartWirePod(crossOS all.OSFuncs) {
 	}
 
 	err = os.Chdir(filepath.Join(conf.InstallPath, "chipper"))
+	fmt.Println(filepath.Join(cross.ResourcesPath(), "icons/png/"+"podfull.png"))
 	fmt.Println("Working directory: " + conf.InstallPath + "/chipper")
 	if err != nil {
 		ErrMsg(fmt.Errorf("error setting runtime directory to " + conf.InstallPath + "/chipper"))
