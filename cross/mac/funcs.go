@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	all "github.com/kercre123/WirePod/cross/all"
 	"github.com/ncruces/zenity"
@@ -47,14 +46,12 @@ func (w *MacOS) Init() error {
 			zenity.ExtraButton("No"),
 			zenity.QuestionIcon,
 		)
-		if err != zenity.ErrExtraButton {
+		if err == nil {
 			w.RunPodAtStartup(true)
+			conf.RunAtStartup = true
 		}
 	}
 	if conf.FirstStartup && w.Hostname() != "escapepod" {
-		conf, _ = w.ReadConfig()
-		conf.FirstStartup = false
-		w.WriteConfig(conf)
 		err := zenity.Info(
 			"Would you like WirePod to set the system's hostname to escapepod? This is required if you want to use a regular, production robot with WirePod. This will require a computer restart.",
 			zenity.Title("WirePod"),
@@ -63,6 +60,8 @@ func (w *MacOS) Init() error {
 			zenity.QuestionIcon,
 		)
 		if err != zenity.ErrExtraButton {
+			conf.FirstStartup = false
+			w.WriteConfig(conf)
 			RunSudoCommand("scutil --set LocalHostName escapepod")
 			err = zenity.Info(
 				"The hostname has been set! Your Mac must now be restarted before you start WirePod. (Restart Later will exit WirePod)",
@@ -77,8 +76,8 @@ func (w *MacOS) Init() error {
 				RunSudoCommand("shutdown -r now")
 			}
 		}
-
-	} else if conf.FirstStartup && w.Hostname() == "escapepod" {
+	}
+	if conf.FirstStartup {
 		conf, _ = w.ReadConfig()
 		conf.FirstStartup = false
 		w.WriteConfig(conf)
@@ -119,6 +118,7 @@ func (w *MacOS) ReadConfig() (all.WPConfig, error) {
 
 func (w *MacOS) WriteConfig(conf all.WPConfig) error {
 	coDir, _ := os.UserConfigDir()
+	os.MkdirAll(filepath.Join(coDir, "wire-pod"), 0777)
 	confFile := filepath.Join(coDir, "wire-pod") + "/wire-pod-conf.json"
 	marshalled, err := json.Marshal(conf)
 	if err != nil {
@@ -139,18 +139,19 @@ func (w *MacOS) ResourcesPath() string {
 	return filepath.Dir(appPath) + "/../Resources/"
 }
 
-// not implementing for now
+// macOS handles this, we don't need to handle it
 
 func (w *MacOS) IsPIDProcessRunning(pid int) (bool, error) {
-	if pid == 0 {
-		return false, nil
-	}
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		return false, nil
-	}
-	err = process.Signal(syscall.Signal(0))
-	return err == nil, nil
+	// if pid == 0 {
+	// 	return false, nil
+	// }
+	// process, err := os.FindProcess(pid)
+	// if err != nil {
+	// 	return false, nil
+	// }
+	// err = process.Signal(syscall.Signal(0))
+	// return err == nil, nil
+	return false, nil
 }
 
 func (w *MacOS) IsPodAlreadyRunning() bool {
@@ -187,7 +188,8 @@ func (w *MacOS) RunPodAtStartup(run bool) error {
 	<string>WirePod.agent</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>`+executable+` -d</string>
+		<string>`+executable+`</string>
+		<string>-d</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>

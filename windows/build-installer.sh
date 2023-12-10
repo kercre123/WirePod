@@ -14,8 +14,13 @@ fi
 export GOOS=windows
 export ARCHITECTURE=amd64
 export CGO_ENABLED=1
-export CC=/usr/bin/x86_64-w64-mingw32-gcc
-export CXX=/usr/bin/x86_64-w64-mingw32-g++
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    export CC=/usr/local/bin/x86_64-w64-mingw32-gcc
+    export CXX=/usr/local/bin/x86_64-w64-mingw32-g++
+else
+    export CC=/usr/bin/x86_64-w64-mingw32-gcc
+    export CXX=/usr/bin/x86_64-w64-mingw32-g++
+fi
 
 
 x86_64-w64-mingw32-windres installer/rc/app.rc -O coff -o installer/app.syso
