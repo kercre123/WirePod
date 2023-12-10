@@ -22,10 +22,11 @@ type WPConfig struct {
 	RunAtStartup bool   `json:"runatstartup"`
 	InstallPath  string `json:"runtimepath"`
 	Version      string `json:"version"`
-	// windows-specific
 	// if NeedsRestart && hostname != escapepod; then error
 	NeedsRestart   bool `json:"needsrestart"`
 	LastRunningPID int  `json:"lastrunningpid"`
+	FirstStartup   bool `json:"firststartup"`
+	NoPodWarn      bool `json:"nopodwarn"`
 }
 
 type OSFuncs interface {

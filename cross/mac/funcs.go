@@ -2,12 +2,15 @@ package cross_mac
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	all "github.com/kercre123/WirePod/cross/all"
+	"github.com/ncruces/zenity"
 )
 
 type MacOS struct {
@@ -19,7 +22,67 @@ func NewMacOS() *MacOS {
 	return obj
 }
 
+func RunSudoCommand(cmd string) error {
+	return exec.Command("osascript", "-e", fmt.Sprintf("do shell script \"%s\" with administrator privileges", cmd)).Run()
+}
+
 func (w *MacOS) Init() error {
+	execu, _ := os.Executable()
+	if !strings.HasPrefix(execu, "/Applications/") {
+		zenity.Error(
+			"WirePod must be copied to the Applications folder before execution.",
+			zenity.ErrorIcon,
+			zenity.Title("WirePod error"),
+			zenity.OKLabel("Quit WirePod"),
+		)
+		os.Exit(0)
+	}
+
+	conf, _ := w.ReadConfig()
+	if conf.FirstStartup {
+		err := zenity.Info(
+			"Would you like WirePod to run when the user logs in?",
+			zenity.Title("WirePod"),
+			zenity.OKLabel("Yes"),
+			zenity.ExtraButton("No"),
+			zenity.QuestionIcon,
+		)
+		if err != zenity.ErrExtraButton {
+			w.RunPodAtStartup(true)
+		}
+	}
+	if conf.FirstStartup && w.Hostname() != "escapepod" {
+		conf, _ = w.ReadConfig()
+		conf.FirstStartup = false
+		w.WriteConfig(conf)
+		err := zenity.Info(
+			"Would you like WirePod to set the system's hostname to escapepod? This is required if you want to use a regular, production robot with WirePod. This will require a computer restart.",
+			zenity.Title("WirePod"),
+			zenity.OKLabel("Yes"),
+			zenity.ExtraButton("No"),
+			zenity.QuestionIcon,
+		)
+		if err != zenity.ErrExtraButton {
+			RunSudoCommand("scutil --set LocalHostName escapepod")
+			err = zenity.Info(
+				"The hostname has been set! Your Mac must now be restarted before you start WirePod. (Restart Later will exit WirePod)",
+				zenity.InfoIcon,
+				zenity.Title("WirePod"),
+				zenity.ExtraButton("Restart Later"),
+				zenity.OKLabel("Restart Now"),
+			)
+			if err == zenity.ErrExtraButton {
+				os.Exit(0)
+			} else {
+				RunSudoCommand("shutdown -r now")
+			}
+		}
+
+	} else if conf.FirstStartup && w.Hostname() == "escapepod" {
+		conf, _ = w.ReadConfig()
+		conf.FirstStartup = false
+		w.WriteConfig(conf)
+	}
 	return nil
 }
 
@@ -29,7 +92,13 @@ func MakeDefaultConfig() all.WPConfig {
 	conf.InstallPath = filepath.Dir(execu) + "/../Frameworks"
 	conf.RunAtStartup = false
 	conf.NeedsRestart = false
-	conf.Version = "v0.0.1"
+	ver, err := os.ReadFile(filepath.Join(filepath.Dir(execu), "/../Resources/version"))
+	if err != nil {
+		conf.Version = "v0.0.1"
+	} else {
+		conf.Version = strings.TrimSpace(string(ver))
+	}
+	conf.FirstStartup = true
 	conf.WSPort = "8080"
 	return conf
 }
@@ -72,22 +141,34 @@ func (w *MacOS) ResourcesPath() string {
 
 // not implementing for now
 
-func (w *MacOS) IsPIDProcessRunning(int) (bool, error) {
-	return false, nil
+func (w *MacOS) IsPIDProcessRunning(pid int) (bool, error) {
+	if pid == 0 {
+		return false, nil
+	}
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return false, nil
+	}
+	err = process.Signal(syscall.Signal(0))
+	return err == nil, nil
 }
 
 func (w *MacOS) IsPodAlreadyRunning() bool {
-	return false
+	conf, _ := w.ReadConfig()
+	isRunning, _ := w.IsPIDProcessRunning(conf.LastRunningPID)
+	return isRunning
 }
 
+// don't need to implement as we don't have an installer
 func (w *MacOS) KillExistingPod() error {
 	return nil
 }
 
 func (w *MacOS) OnExit() {
+	conf, _ := w.ReadConfig()
+	conf.LastRunningPID = 0
+	w.WriteConfig(conf)
 }
-
-// end things we need to implement
 
 func (w *MacOS) RunPodAtStartup(run bool) error {
 	homeDir, _ := os.UserHomeDir()
@@ -106,7 +187,7 @@ func (w *MacOS) RunPodAtStartup(run bool) error {
 	<string>WirePod.agent</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>`+executable+`</string>
+		<string>`+executable+` -d</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>

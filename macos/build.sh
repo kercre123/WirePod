@@ -2,6 +2,13 @@
 
 set -e
 
+export PODVER="$1"
+
+if [[ ${PODVER} == "" ]]; then
+	echo "You must provide a version (v1.0.0)."
+	exit 0
+fi
+
 brew install autoconf automake libtool create-dmg go wget pkg-config
 
 export ORIGDIR="$(pwd)"
@@ -40,8 +47,8 @@ if [[ ! -d ${PODLIBS}/vosk ]]; then
 fi
 
 export CGO_ENABLED=1
-export CGO_LDFLAGS="-L${PODLIBS}/opus/lib -L${PODLIBS}/vosk"
-export CGO_CFLAGS="-I${PODLIBS}/opus/include -I${PODLIBS}/vosk"
+export CGO_LDFLAGS="-L${PODLIBS}/opus/lib -L${PODLIBS}/vosk -mmacosx-version-min=10.10"
+export CGO_CFLAGS="-I${PODLIBS}/opus/include -I${PODLIBS}/vosk -mmacosx-version-min=10.10"
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${PODLIBS}/opus/lib/pkgconfig
 
 rm -rf target
@@ -93,6 +100,7 @@ export CHPATH="../wire-pod/chipper"
 export CLPATH="../wire-pod/vector-cloud"
 cp -r ../icons/* ${RESOURCES}
 cp -r ../icons ${RESOURCES}/
+echo "${PODVER}" > ${RESOURCES}/version
 cp ${PODLIBS}/opus/lib/libopus.0.dylib ${FRAMEWORKS}    
 cp ${PODLIBS}/vosk/libvosk.dylib ${FRAMEWORKS}
 cp ${CHPATH}/weather-map.json ${CHIPPER}
@@ -121,5 +129,5 @@ sudo create-dmg \
 --hide-extension "WirePod.app" \
 --app-drop-link 600 200 \
 --hdiutil-quiet \
-target/installer/WirePod-${GOOS}-${GOARCH}.dmg \
+target/installer/WirePod-${GOOS}-${GOARCH}-${PODVER}.dmg \
 target/app/

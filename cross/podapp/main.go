@@ -156,7 +156,6 @@ func onReady() {
 		)
 		os.Exit(1)
 	}
-	fmt.Println(filepath.Join(cross.ResourcesPath(), "icons/ico") + "/pod24x24.ico")
 
 	systray.SetIcon(systrayIcon)
 	if runtime.GOOS == "windows" {
@@ -164,9 +163,9 @@ func onReady() {
 	}
 	systray.SetTooltip("WirePod is starting...")
 	mQuit := systray.AddMenuItem("Quit", "Quit WirePod")
-	mBrowse := systray.AddMenuItem("Web interface", "Open web UI")
-	mConfig := systray.AddMenuItem("Config folder", "Open config folder in case you need to. The web UI should have everything you need.")
-	mStartup := systray.AddMenuItem("Run at startup", "")
+	mBrowse := systray.AddMenuItem("Web Interface", "Open web UI")
+	mConfig := systray.AddMenuItem("Config Folder", "Open config folder in case you need to. The web UI should have everything you need.")
+	mStartup := systray.AddMenuItem("Run On Startup", "")
 	mAbout := systray.AddMenuItem("About", "About WirePod")
 
 	conf, _ := cross.ReadConfig()
@@ -192,16 +191,16 @@ func onReady() {
 				conf, _ := os.UserConfigDir()
 				go openFileExplorer(filepath.Join(conf, vars.PodName))
 			case <-mAbout.ClickedCh:
-				zenity.Info("WirePod is an Escape Pod alternative which is able to get any Anki/DDL Vector robot setup and working with voice commands.",
+				zenity.Info("WirePod is an Escape Pod alternative which is able to get any Anki/DDL Vector robot setup and working with voice commands.\n\nVersion: "+conf.Version,
 					zenity.Icon(mBoxIcon()),
 					zenity.Title("WirePod"))
 			case <-mStartup.ClickedCh:
 				if mStartup.Checked() {
 					mStartup.Uncheck()
-					cross.RunPodAtStartup(true)
+					cross.RunPodAtStartup(false)
 				} else {
 					mStartup.Check()
-					cross.RunPodAtStartup(false)
+					cross.RunPodAtStartup(true)
 				}
 			}
 		}
