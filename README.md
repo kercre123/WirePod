@@ -18,12 +18,12 @@ Cross-platform code and resources for [wire-pod](https://github.com/kercre123/wi
 -  It does not work with firmware 1.8.1. It only works with 1.7.2.6014ep and 2.0.1.6076ep. Those releases use port 8084 while 1.8.1 uses 443 (which I can't bind to on Android)
 -  It is fully featured, but it is still in a proof-of-concept stage.
 -  To use:
-  -  Install the APK
-  -  Go to Android Settings -> Apps -> WirePod and make sure battery optimization is set to Unrestricted or Not restricted
-  -  Open the WirePod app
-  -  Make sure you are connected to the same Wi-Fi as Vector, and not mobile data
-  -  Press Start (under "status"). It should say "running! <url>"
-  -  Press "start broadcasting" so your device can be accessible at escapepod.local
-  -  Press "start pinging jdocs"
-  -  Go to the link under "status" in the phone's browser or another device on the network, and follow the instructions
-  -  To setup a bot, use the instructions in the wire-pod wiki. You will probably need to clear user data
+    1.  Install the APK
+    2.  Go to Android Settings -> Apps -> WirePod and make sure battery optimization is set to Unrestricted or Not restricted
+    3.  Open the WirePod app
+    4.  Make sure you are connected to the same Wi-Fi as Vector, and not mobile data
+    5.  Press Start (under "status"). It should say "running! <url>"
+    6.  Press "start broadcasting" so your device can be accessible at escapepod.local
+    7.  Press "start pinging jdocs"
+    8.  Go to the link under "status" in the phone's browser or another device on the network, and follow the instructions
+    9.  To setup a bot, use the instructions in the wire-pod wiki. You will probably need to clear user data
