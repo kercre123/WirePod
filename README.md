@@ -18,7 +18,7 @@ Cross-platform code and resources for [wire-pod](https://github.com/kercre123/wi
 -  It does not work with firmware 1.8.1. It only works with 1.7.2.6014ep and 2.0.1.6076ep. Those releases use port 8084 while 1.8.1 uses 443 (which I can't bind to on Android)
 -  It is fully featured, but it is still in a proof-of-concept stage.
 -  To use:
-    1.  Install the APK
+    1.  Install the APK (can be downloaded [here](https://github.com/kercre123/WirePod/releases/download/v0.2.0/WirePod-0.2.0.apk))
     2.  Go to Android Settings -> Apps -> WirePod and make sure battery optimization is set to Unrestricted or Not restricted
     3.  Open the WirePod app
     4.  Make sure you are connected to the same Wi-Fi as Vector, and not mobile data
