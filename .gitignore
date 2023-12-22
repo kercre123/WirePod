@@ -8,3 +8,7 @@
 /windows/tmp
 /windows/libs
 /windows/*.zip
+/android/WirePod.apk
+/android/key/ks.jks
+/android/key/passwd
+/android/resources/version
