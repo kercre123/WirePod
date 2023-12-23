@@ -152,7 +152,7 @@ func StartFromProgramInit(sttInitFunc func() error, sttHandlerFunc interface{}, 
 }
 
 func PostmDNS() {
-	logger.Println("Registering escapepod.local on network (every minute)")
+	logger.Println("Registering escapepod.local on network (every 10 seconds)")
 	mdnsport := 443
 	for {
 		ipAddr := botsetup.GetOutboundIP().String()
