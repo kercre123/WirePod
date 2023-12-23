@@ -12,13 +12,11 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	cross_win "github.com/kercre123/WirePod/cross/win"
 	"github.com/ncruces/zenity"
@@ -198,55 +196,6 @@ func DoInstall(myApp fyne.App, is InstallSettings) {
 	}
 }
 
-func GetSetNameEscapepod(myApp fyne.App, is InstallSettings) {
-	window := myApp.NewWindow("WirePod installer")
-	window.SetIcon(icon)
-	window.CenterOnScreen()
-	window.SetMaster()
-	window.Resize(fyne.NewSize(673, 275))
-	content := container.NewVBox()
-
-	//content.Resize(fyne.NewSize(600, 200))
-	prefInfo := widget.NewCard("WirePod installer",
-		"Your computer's hostname is not `escapepod`.",
-		container.NewWithoutLayout())
-	content.Add(prefInfo)
-
-	morePrefInfo := widget.NewRichTextWithText("This means regular Vector robots will not be able to communicate with WirePod unless you have a special network configuration or set it to `escapepod`.")
-	morePrefInfo.Wrapping = fyne.TextWrapWord
-	content.Add(morePrefInfo)
-
-	question := widget.NewRichTextWithText("Would you like the installer to set the computer's hostname to `escapepod` during installation?")
-	question.Wrapping = fyne.TextWrapWord
-	content.Add(question)
-
-	exp := widget.NewRichTextWithText("This will require a computer restart once installation has completed.")
-	question.Wrapping = fyne.TextWrapWord
-	content.Add(exp)
-
-	content.Add(widget.NewSeparator())
-
-	yesButton := widget.NewButton("Yes", func() {
-		is.SetHostnameEpod = true
-		window.Hide()
-		DoInstall(myApp, is)
-	})
-	noButton := widget.NewButton("No", func() {
-		is.SetHostnameEpod = false
-		cross_win.DeleteRegistryValue(cross_win.SoftwareKey, "NeedsRestart")
-		window.Hide()
-		DoInstall(myApp, is)
-	})
-	buttonContainer := container.New(layout.NewGridLayout(2), yesButton, noButton)
-	content.Add(buttonContainer)
-	window.SetContent(content)
-	window.Show()
-	go func() {
-		time.Sleep(time.Millisecond * 500)
-		window.Resize(fyne.NewSize(673, 275))
-	}()
-}
-
 func ValidateWebPort(port string) bool {
 	i, err := strconv.Atoi(port)
 	if err == nil {
@@ -305,12 +254,7 @@ func GetPreferences(myApp fyne.App) {
 			)
 		} else {
 			window.Hide()
-			hn, _ := os.Hostname()
-			if hn == "escapepod" {
-				DoInstall(myApp, is)
-			} else {
-				GetSetNameEscapepod(myApp, is)
-			}
+			DoInstall(myApp, is)
 		}
 	})
 
