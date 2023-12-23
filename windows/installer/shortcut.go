@@ -23,7 +23,7 @@ func CreateShortcut(is InstallSettings) {
 	}
 	defer wshell.Release()
 
-	cs, err := oleutil.CallMethod(wshell, "CreateShortcut", "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\wire-pod.lnk")
+	cs, err := oleutil.CallMethod(wshell, "CreateShortcut", "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\WirePod.lnk")
 	if err != nil {
 		panic(err)
 	}

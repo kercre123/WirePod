@@ -6,8 +6,8 @@ import (
 
 	"github.com/fforchino/vector-go-sdk/pkg/vector"
 	"github.com/fforchino/vector-go-sdk/pkg/vectorpb"
-	"github.com/kercre123/chipper/pkg/logger"
-	"github.com/kercre123/chipper/pkg/vars"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
 )
 
 var PingingStarted bool
@@ -92,7 +92,7 @@ func PingJdocsInit() {
 }
 
 func PingJdocsStart() {
-	ctx := context.Background()
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*5)
 	if PingingStarted {
 		return
 	}

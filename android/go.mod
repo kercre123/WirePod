@@ -4,8 +4,10 @@ go 1.21.5
 
 require (
 	fyne.io/fyne/v2 v2.4.2
-	github.com/kercre123/chipper v0.3.0
+	github.com/fforchino/vector-go-sdk v0.0.0-20231108155304-62168f3595d6
+	github.com/kercre123/wire-pod/chipper v1.0.1
 	github.com/kercre123/zeroconf v1.0.1
+	github.com/wlynxg/anet v0.0.1
 )
 
 require (
@@ -13,7 +15,6 @@ require (
 	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
-	github.com/alphacep/vosk-api/go v0.3.46 // indirect
 	github.com/bramvdbogaerde/go-scp v1.2.1 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -21,7 +22,6 @@ require (
 	github.com/digital-dream-labs/api v0.0.0-20210824232136-8cc90c1bb12c // indirect
 	github.com/digital-dream-labs/hugh v0.0.0-20210210154335-f4159b9fcd5f // indirect
 	github.com/digital-dream-labs/opus-go v0.0.0-20201230195736-934a8a9e0a1e // indirect
-	github.com/fforchino/vector-go-sdk v0.0.0-20231108155304-62168f3595d6 // indirect
 	github.com/fredbi/uri v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fyne-io/gl-js v0.0.0-20220119005834-d2da28d9ccfe // indirect
@@ -42,6 +42,7 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/josephspurrier/goversioninfo v1.4.0 // indirect
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
+	github.com/kercre123/vosk-api/go v1.0.2 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/maxhawkins/go-webrtcvad v0.0.0-20210121163624-be60036f3083 // indirect
 	github.com/miekg/dns v1.1.57 // indirect
@@ -64,7 +65,6 @@ require (
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/tevino/abool v1.2.0 // indirect
-	github.com/wlynxg/anet v0.0.1 // indirect
 	github.com/yuin/goldmark v1.5.5 // indirect
 	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/image v0.11.0 // indirect

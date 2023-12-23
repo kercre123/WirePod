@@ -15,11 +15,11 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
-	"github.com/kercre123/chipper/pkg/initwirepod"
-	"github.com/kercre123/chipper/pkg/logger"
-	"github.com/kercre123/chipper/pkg/vars"
-	botsetup "github.com/kercre123/chipper/pkg/wirepod/setup"
-	wirepod_vosk "github.com/kercre123/chipper/pkg/wirepod/stt/vosk"
+	"github.com/kercre123/wire-pod/chipper/pkg/initwirepod"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	botsetup "github.com/kercre123/wire-pod/chipper/pkg/wirepod/setup"
+	wirepod_vosk "github.com/kercre123/wire-pod/chipper/pkg/wirepod/stt/vosk"
 	"github.com/kercre123/zeroconf"
 	"github.com/wlynxg/anet"
 )
@@ -131,29 +131,10 @@ func PostmDNS() error {
 	PostingMDNS = true
 	logger.Println("Registering escapepod.local on network (every minute)")
 	mdnsport := 8084
-
-	ipAddr := botsetup.GetOutboundIP().String()
-	// create a server a few times to ensure broadcast
-	for i := 0; i < 3; i++ {
-		server, err := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", mdnsport, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
-		if err != nil {
-			PostingMDNS = false
-			return err
-		}
-		time.Sleep(time.Second / 3)
-		server.Shutdown()
-	}
-
-	time.Sleep(time.Second)
-
 	for {
 		ipAddr := botsetup.GetOutboundIP().String()
-		server, err := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", mdnsport, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
-		if err != nil {
-			PostingMDNS = false
-			return err
-		}
-		time.Sleep(time.Second * 60)
+		server, _ := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", mdnsport, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
+		time.Sleep(time.Second * 10)
 		server.Shutdown()
 		server = nil
 		time.Sleep(time.Second * 2)

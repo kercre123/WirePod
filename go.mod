@@ -9,7 +9,7 @@ require (
 	github.com/getlantern/systray v1.2.2
 	github.com/go-ole/go-ole v1.3.0
 	github.com/grandcat/zeroconf v1.0.0
-	github.com/kercre123/wire-pod/chipper v0.0.0-20231204134742-ca8838c409e1
+	github.com/kercre123/wire-pod/chipper v1.0.1
 	github.com/ncruces/zenity v0.10.10
 	github.com/soheilhy/cmux v0.1.5
 	golang.org/x/sys v0.15.0
@@ -20,7 +20,6 @@ require (
 	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20231202071711-9a357b53e9c9 // indirect
-	github.com/alphacep/vosk-api/go v0.3.45 // indirect
 	github.com/bramvdbogaerde/go-scp v1.2.1 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -48,7 +47,7 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/uuid v1.4.0 // indirect
+	github.com/google/uuid v1.5.0 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/grd/ogg v0.0.0-20130623210630-0dae53159b70 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
@@ -56,6 +55,8 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/josephspurrier/goversioninfo v1.4.0 // indirect
 	github.com/jsummers/gobmp v0.0.0-20230614200233-a9de23ed2e25 // indirect
+	github.com/kercre123/vosk-api/go v1.0.2 // indirect
+	github.com/kercre123/zeroconf v1.0.1 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/maxhawkins/go-webrtcvad v0.0.0-20210121163624-be60036f3083 // indirect
 	github.com/miekg/dns v1.1.57 // indirect
@@ -79,6 +80,7 @@ require (
 	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tevino/abool v1.2.0 // indirect
+	github.com/wlynxg/anet v0.0.1 // indirect
 	github.com/yuin/goldmark v1.6.0 // indirect
 	go.opentelemetry.io/otel v1.21.0 // indirect
 	go.opentelemetry.io/otel/metric v1.21.0 // indirect
@@ -96,7 +98,7 @@ require (
 	google.golang.org/genproto v0.0.0-20231127180814-3a041ad873d4 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231127180814-3a041ad873d4 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231127180814-3a041ad873d4 // indirect
-	google.golang.org/grpc v1.59.0 // indirect
+	google.golang.org/grpc v1.60.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
 	gopkg.in/hraban/opus.v2 v2.0.0-20230925203106-0188a62cb302 // indirect

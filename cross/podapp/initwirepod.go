@@ -154,13 +154,14 @@ func StartFromProgramInit(sttInitFunc func() error, sttHandlerFunc interface{}, 
 
 func PostmDNS() {
 	logger.Println("Registering escapepod.local on network (every minute)")
-	epodIsPosting = true
+	mdnsport := 443
 	for {
 		ipAddr := botsetup.GetOutboundIP().String()
-		server, _ := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", 443, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
-		time.Sleep(time.Second * 60)
+		server, _ := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", mdnsport, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
+		time.Sleep(time.Second * 10)
 		server.Shutdown()
 		server = nil
+		time.Sleep(time.Second * 2)
 	}
 }
 
@@ -205,9 +206,9 @@ func RestartServer() {
 }
 
 func StartChipper(fromInit bool) {
-	// if vars.APIConfig.Server.EPConfig && !epodIsPosting {
-	// 	go PostmDNS()
-	// }
+	if vars.APIConfig.Server.EPConfig && !epodIsPosting {
+		go PostmDNS()
+	}
 	if vars.APIConfig.Server.EPConfig {
 		CheckHostname()
 	}
