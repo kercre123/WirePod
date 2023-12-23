@@ -51,37 +51,11 @@ func (w *MacOS) Init() error {
 			conf.RunAtStartup = true
 		}
 	}
-	if conf.FirstStartup && w.Hostname() != "escapepod" {
-		err := zenity.Info(
-			"Would you like WirePod to set the system's hostname to escapepod? This is required if you want to use a regular, production robot with WirePod. This will require a computer restart.",
-			zenity.Title("WirePod"),
-			zenity.OKLabel("Yes"),
-			zenity.ExtraButton("No"),
-			zenity.QuestionIcon,
-		)
-		if err != zenity.ErrExtraButton {
-			conf.FirstStartup = false
-			w.WriteConfig(conf)
-			RunSudoCommand("scutil --set LocalHostName escapepod")
-			err = zenity.Info(
-				"The hostname has been set! Your Mac must now be restarted before you start WirePod. (Restart Later will exit WirePod)",
-				zenity.InfoIcon,
-				zenity.Title("WirePod"),
-				zenity.ExtraButton("Restart Later"),
-				zenity.OKLabel("Restart Now"),
-			)
-			if err == zenity.ErrExtraButton {
-				os.Exit(0)
-			} else {
-				RunSudoCommand("shutdown -r now")
-			}
-		}
-	}
 	if conf.FirstStartup {
 		conf, _ = w.ReadConfig()
 		conf.FirstStartup = false
-		w.WriteConfig(conf)
 	}
+	w.WriteConfig(conf)
 	return nil
 }
 

@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -173,28 +172,6 @@ func IfFileExist(name string) bool {
 	return true
 }
 
-func CheckHostname() {
-	hostname := cross.Hostname()
-	confDir, _ := os.UserConfigDir()
-	warnFile := filepath.Join(confDir, vars.PodName) + "/NoPodWarn"
-	if hostname != "escapepod" && vars.APIConfig.Server.EPConfig && !IfFileExist(warnFile) {
-		logger.Println("\033[31m\033[1mWARNING: You have chosen the Escape Pod config, but the system hostname is not 'escapepod'. This means your robot will not be able to communicate with wire-pod unless you have a custom network configuration.")
-		logger.Println("Actual reported hostname: " + hostname + "\033[0m")
-		err := zenity.Warning(
-			"WARNING: You have selected the Escape Pod config, but the system hostname is not 'escapepod'. This means your robot will not be able to communicate with wire-pod unless you have a custom network configuration.",
-			zenity.ExtraButton("Don't show again"),
-			zenity.OKLabel("OK"),
-			zenity.WarningIcon,
-			zenity.Title(mBoxTitle),
-		)
-		if err != nil {
-			if err == zenity.ErrExtraButton {
-				os.WriteFile(filepath.Join(confDir, vars.PodName)+"/NoPodWarn", []byte("true"), 0777)
-			}
-		}
-	}
-}
-
 func RestartServer() {
 	if chipperServing {
 		serverOne.Close()
@@ -208,9 +185,6 @@ func RestartServer() {
 func StartChipper(fromInit bool) {
 	if vars.APIConfig.Server.EPConfig && !epodIsPosting {
 		go PostmDNS()
-	}
-	if vars.APIConfig.Server.EPConfig {
-		CheckHostname()
 	}
 	// load certs
 	var certPub []byte
