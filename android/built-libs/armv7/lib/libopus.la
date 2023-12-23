@@ -38,4 +38,4 @@ dlopen=''
 dlpreopen=''
 
 # Directory that this library needs to be installed in:
-libdir='/home/kerigan/projects/androi/built-libs/armv7/lib'
+libdir='/home/kerigan/opus-armv7/lib'

@@ -49,8 +49,8 @@ cp WirePod.apk ../
 cd ..
 echo "Building WirePod for android/arm64..."
 GOOS=android GOARCH=arm64 go build -buildmode=c-shared -o libWirePod-arm64.so -tags nolibopusfile
-export CC=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi23-clang
-export CXX=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi23-clang++
+export CC=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi16-clang
+export CXX=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi16-clang++
 export CGO_ENABLED=1
 export CGO_LDFLAGS="-L$(pwd)/built-libs/armv7/lib"
 export CGO_CFLAGS="-I$(pwd)/built-libs/armv7/include"
@@ -80,4 +80,5 @@ rm -f WirePod.apk.idsig
 rm -f vessel/WirePod.apk
 rm -f resources/static.zip
 rm -f static.go
-echo "Build complete ./WirePod.apk"
+mv WirePod.apk WirePod-$1.apk
+echo "Build complete ./WirePod-$1.apk"
