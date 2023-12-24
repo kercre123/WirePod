@@ -78,6 +78,7 @@ func PodWindow(myApp fyne.App) {
 		secondCard.SetSubTitle("running! http://" + botsetup.GetOutboundIP().String() + ":8080")
 		go func() {
 			startButton.Disable()
+			go PostmDNS()
 			PingJdocsInit()
 			go PingJdocsStart()
 			go func() {
