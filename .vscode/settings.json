@@ -1,6 +1,6 @@
 {
     "go.toolsEnvVars": {
-        "GOOS": "darwin",
+        "GOOS": "windows",
         "GOARCH": "amd64"
     }
 }

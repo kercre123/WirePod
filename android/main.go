@@ -13,15 +13,18 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
-	"github.com/kercre123/chipper/pkg/initwirepod"
-	"github.com/kercre123/chipper/pkg/logger"
-	"github.com/kercre123/chipper/pkg/vars"
-	botsetup "github.com/kercre123/chipper/pkg/wirepod/setup"
-	wirepod_vosk "github.com/kercre123/chipper/pkg/wirepod/stt/vosk"
+	"github.com/kercre123/wire-pod/chipper/pkg/initwirepod"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	botsetup "github.com/kercre123/wire-pod/chipper/pkg/wirepod/setup"
+	wirepod_vosk "github.com/kercre123/wire-pod/chipper/pkg/wirepod/stt/vosk"
 	"github.com/kercre123/zeroconf"
 	"github.com/wlynxg/anet"
 )
+
+var PostingMDNS bool
 
 var DataPath string
 
@@ -52,8 +55,10 @@ func main() {
 
 func PodWindow(myApp fyne.App) {
 
-	window := myApp.NewWindow("test")
+	window := myApp.NewWindow("pod")
 	window.SetMaster()
+
+	var stuffContainer fyne.CanvasObject
 
 	firstCard := widget.NewCard("WirePod", "", container.NewWithoutLayout())
 
@@ -61,61 +66,35 @@ func PodWindow(myApp fyne.App) {
 		os.Exit(0)
 	})
 
-	logText := widget.NewLabel(logger.LogTrayList)
-	scrollContainer := container.NewVScroll(logText)
-	scrollContainer.Resize(fyne.NewSize(1000, 1000))
+	fifthCard := widget.NewCard("ping Jdocs", "", container.NewWithoutLayout())
 
 	secondCard := widget.NewCard("status", "", container.NewWithoutLayout())
 	var startButton *widget.Button
 	startButton = widget.NewButton("Start", func() {
 		if !IsConnedToWifi() {
-			secondCard.SetSubTitle("this device must be connected to wifi first")
+			dialog.ShowCustom("this device must be connected to Wi-Fi first", "OK", container.NewWithoutLayout(), window)
 			return
 		}
 		secondCard.SetSubTitle("running! http://" + botsetup.GetOutboundIP().String() + ":8080")
 		go func() {
 			startButton.Disable()
+			go PostmDNS()
+			PingJdocsInit()
+			go PingJdocsStart()
+			go func() {
+				timeChan := GetTimeChannel()
+				for time := range timeChan {
+					if time == 0 {
+						fifthCard.SetSubTitle("pinging...")
+					} else {
+						fifthCard.SetSubTitle(fmt.Sprint(time) + " secs until next ping")
+					}
+				}
+			}()
 			initwirepod.StartFromProgramInit(wirepod_vosk.Init, wirepod_vosk.STT, wirepod_vosk.Name)
 			startButton.Enable()
 			secondCard.SetSubTitle("wirepod failed :(")
 		}()
-	})
-
-	fourthCard := widget.NewCard("broadcast mDNS", "", container.NewWithoutLayout())
-
-	var mdnsButton *widget.Button
-	mdnsButton = widget.NewButton("start broadcasting", func() {
-		fourthCard.SetSubTitle("broadcasting")
-		go func() {
-			mdnsButton.Disable()
-			err := PostmDNS()
-			mdnsButton.Enable()
-			if err != nil {
-				fourthCard.SetSubTitle(err.Error())
-			}
-		}()
-	})
-
-	fifthCard := widget.NewCard("ping Jdocs", "", container.NewWithoutLayout())
-
-	var jdocsButton *widget.Button
-	jdocsButton = widget.NewButton("start pinging jdocs", func() {
-		PingJdocsInit()
-		go func() {
-			fifthCard.SetSubTitle("starting Jdocs pinger...")
-			PingJdocsStart()
-		}()
-		go func() {
-			timeChan := GetTimeChannel()
-			for time := range timeChan {
-				if time == 0 {
-					fifthCard.SetSubTitle("pinging...")
-				} else {
-					fifthCard.SetSubTitle(fmt.Sprint(time) + " secs until next ping")
-				}
-			}
-		}()
-		jdocsButton.Disable()
 	})
 
 	var jdocsNowButton *widget.Button
@@ -129,48 +108,33 @@ func PodWindow(myApp fyne.App) {
 		}()
 	})
 
-	window.SetContent(container.NewVScroll(container.NewVBox(
+	stuffContainer = container.NewVScroll(container.NewVBox(
 		firstCard,
 		exitButton,
 		widget.NewSeparator(),
 		secondCard,
 		startButton,
 		widget.NewSeparator(),
-		fourthCard,
-		mdnsButton,
-		widget.NewSeparator(),
 		fifthCard,
-		jdocsButton,
 		jdocsNowButton,
-	)))
+	))
+
+	window.SetContent(stuffContainer)
 
 	window.Show()
 }
 
 func PostmDNS() error {
+	if PostingMDNS {
+		return nil
+	}
+	PostingMDNS = true
 	logger.Println("Registering escapepod.local on network (every minute)")
 	mdnsport := 8084
-
-	ipAddr := botsetup.GetOutboundIP().String()
-	// create a server a few times to ensure broadcast
-	for i := 0; i < 3; i++ {
-		server, err := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", mdnsport, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
-		if err != nil {
-			return err
-		}
-		time.Sleep(time.Second / 3)
-		server.Shutdown()
-	}
-
-	time.Sleep(time.Second)
-
 	for {
 		ipAddr := botsetup.GetOutboundIP().String()
-		server, err := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", mdnsport, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
-		if err != nil {
-			return err
-		}
-		time.Sleep(time.Second * 60)
+		server, _ := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", mdnsport, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
+		time.Sleep(time.Second * 10)
 		server.Shutdown()
 		server = nil
 		time.Sleep(time.Second * 2)

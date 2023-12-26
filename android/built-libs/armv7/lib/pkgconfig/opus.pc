@@ -1,6 +1,6 @@
 # Opus codec reference implementation pkg-config file
 
-prefix=/home/kerigan/projects/androi/built-libs/armv7
+prefix=/home/kerigan/opus-armv7
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include

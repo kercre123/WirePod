@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -153,14 +152,15 @@ func StartFromProgramInit(sttInitFunc func() error, sttHandlerFunc interface{}, 
 }
 
 func PostmDNS() {
-	logger.Println("Registering escapepod.local on network (every minute)")
-	epodIsPosting = true
+	logger.Println("Registering escapepod.local on network (every 10 seconds)")
+	mdnsport := 443
 	for {
 		ipAddr := botsetup.GetOutboundIP().String()
-		server, _ := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", 443, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
-		time.Sleep(time.Second * 60)
+		server, _ := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", mdnsport, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
+		time.Sleep(time.Second * 10)
 		server.Shutdown()
 		server = nil
+		time.Sleep(time.Second * 2)
 	}
 }
 
@@ -170,28 +170,6 @@ func IfFileExist(name string) bool {
 		return false
 	}
 	return true
-}
-
-func CheckHostname() {
-	hostname := cross.Hostname()
-	confDir, _ := os.UserConfigDir()
-	warnFile := filepath.Join(confDir, vars.PodName) + "/NoPodWarn"
-	if hostname != "escapepod" && vars.APIConfig.Server.EPConfig && !IfFileExist(warnFile) {
-		logger.Println("\033[31m\033[1mWARNING: You have chosen the Escape Pod config, but the system hostname is not 'escapepod'. This means your robot will not be able to communicate with wire-pod unless you have a custom network configuration.")
-		logger.Println("Actual reported hostname: " + hostname + "\033[0m")
-		err := zenity.Warning(
-			"WARNING: You have selected the Escape Pod config, but the system hostname is not 'escapepod'. This means your robot will not be able to communicate with wire-pod unless you have a custom network configuration.",
-			zenity.ExtraButton("Don't show again"),
-			zenity.OKLabel("OK"),
-			zenity.WarningIcon,
-			zenity.Title(mBoxTitle),
-		)
-		if err != nil {
-			if err == zenity.ErrExtraButton {
-				os.WriteFile(filepath.Join(confDir, vars.PodName)+"/NoPodWarn", []byte("true"), 0777)
-			}
-		}
-	}
 }
 
 func RestartServer() {
@@ -205,11 +183,8 @@ func RestartServer() {
 }
 
 func StartChipper(fromInit bool) {
-	// if vars.APIConfig.Server.EPConfig && !epodIsPosting {
-	// 	go PostmDNS()
-	// }
-	if vars.APIConfig.Server.EPConfig {
-		CheckHostname()
+	if vars.APIConfig.Server.EPConfig && !epodIsPosting {
+		go PostmDNS()
 	}
 	// load certs
 	var certPub []byte
