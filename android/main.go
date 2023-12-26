@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,7 +49,8 @@ func main() {
 	myApp := app.New()
 	DataPath = filepath.Dir(myApp.Storage().RootURI().Path())
 	logger.Println("DATAPATH: " + DataPath)
-	if NeedUnzip() {
+	version := myApp.Metadata().Version
+	if NeedUnzip(version) {
 		fmt.Println("Unzipping static content")
 		DeleteStaticContent()
 		DoUnzip()
@@ -80,6 +82,17 @@ func PodWindow(myApp fyne.App) {
 		}
 	})
 
+	var linkLabel *widget.RichText
+	linkLabel = widget.NewRichTextWithText("Configuration/setup page:")
+	linkLabel.Hide()
+
+	var hyprLink *widget.Hyperlink
+	hyprLink = widget.NewHyperlink("http://"+botsetup.GetOutboundIP().String()+":8080", &url.URL{
+		Scheme: "http",
+		Host:   botsetup.GetOutboundIP().String() + ":8080",
+	})
+	hyprLink.Hide()
+
 	secondCard := widget.NewCard("WirePod Control", "", container.NewWithoutLayout())
 	var startButton *widget.Button
 	startButton = widget.NewButton("Start", func() {
@@ -87,13 +100,17 @@ func PodWindow(myApp fyne.App) {
 			dialog.ShowCustom("this device must be connected to Wi-Fi first", "OK", container.NewWithoutLayout(), window)
 			return
 		}
-		secondCard.SetSubTitle("running! http://" + botsetup.GetOutboundIP().String() + ":8080")
+		secondCard.SetSubTitle("Running!")
 		go func() {
+			hyprLink.Show()
+			linkLabel.Show()
 			startButton.Disable()
 			contextCheck.Disable()
 			initwirepod.StartFromProgramInit(wirepod_vosk.Init, wirepod_vosk.STT, wirepod_vosk.Name)
 			startButton.Enable()
 			contextCheck.Enable()
+			hyprLink.Hide()
+			linkLabel.Hide()
 			secondCard.SetSubTitle("wirepod failed :(")
 		}()
 	})
@@ -103,6 +120,8 @@ func PodWindow(myApp fyne.App) {
 		exitButton,
 		widget.NewSeparator(),
 		secondCard,
+		linkLabel,
+		hyprLink,
 		contextCheck,
 		startButton,
 	))
@@ -160,15 +179,14 @@ func DeleteStaticContent() {
 	os.RemoveAll(filepath.Join(DataPath, "/static"))
 }
 
-func NeedUnzip() bool {
-	currentVersion := fyne.CurrentApp().Metadata().Version
+func NeedUnzip(version string) bool {
 	versionFilePath := filepath.Join(DataPath, "/static/version")
 	versionFileBytes, err := os.ReadFile(versionFilePath)
 	if err != nil {
 		return true
 	}
-	fmt.Println(currentVersion, string(versionFileBytes))
-	if strings.TrimSpace(currentVersion) == strings.TrimSpace(string(versionFileBytes)) {
+	fmt.Println(version, string(versionFileBytes))
+	if strings.TrimSpace(version) == strings.TrimSpace(string(versionFileBytes)) {
 		return false
 	}
 	return true
