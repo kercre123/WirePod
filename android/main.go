@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -39,6 +40,11 @@ func IsConnedToWifi() bool {
 }
 
 func main() {
+	go PostmDNSWhenNewVector()
+	go func() {
+		PingJdocsInit()
+		PingJdocsStart()
+	}()
 	myApp := app.New()
 	DataPath = filepath.Dir(myApp.Storage().RootURI().Path())
 	logger.Println("DATAPATH: " + DataPath)
@@ -66,9 +72,15 @@ func PodWindow(myApp fyne.App) {
 		os.Exit(0)
 	})
 
-	fifthCard := widget.NewCard("ping Jdocs", "", container.NewWithoutLayout())
+	contextCheck := widget.NewCheck("with specific grammer?", func(checked bool) {
+		if checked {
+			wirepod_vosk.GrammerEnable = true
+		} else {
+			wirepod_vosk.GrammerEnable = false
+		}
+	})
 
-	secondCard := widget.NewCard("status", "", container.NewWithoutLayout())
+	secondCard := widget.NewCard("WirePod Control", "", container.NewWithoutLayout())
 	var startButton *widget.Button
 	startButton = widget.NewButton("Start", func() {
 		if !IsConnedToWifi() {
@@ -78,33 +90,11 @@ func PodWindow(myApp fyne.App) {
 		secondCard.SetSubTitle("running! http://" + botsetup.GetOutboundIP().String() + ":8080")
 		go func() {
 			startButton.Disable()
-			go PostmDNS()
-			PingJdocsInit()
-			go PingJdocsStart()
-			go func() {
-				timeChan := GetTimeChannel()
-				for time := range timeChan {
-					if time == 0 {
-						fifthCard.SetSubTitle("pinging...")
-					} else {
-						fifthCard.SetSubTitle(fmt.Sprint(time) + " secs until next ping")
-					}
-				}
-			}()
+			contextCheck.Disable()
 			initwirepod.StartFromProgramInit(wirepod_vosk.Init, wirepod_vosk.STT, wirepod_vosk.Name)
 			startButton.Enable()
+			contextCheck.Enable()
 			secondCard.SetSubTitle("wirepod failed :(")
-		}()
-	})
-
-	var jdocsNowButton *widget.Button
-	jdocsNowButton = widget.NewButton("ping Jdocs now", func() {
-		go func() {
-			fifthCard.SetSubTitle("pinging...")
-			jdocsNowButton.Disable()
-			PingNow()
-			fifthCard.SetSubTitle("pinging done")
-			jdocsNowButton.Enable()
 		}()
 	})
 
@@ -113,10 +103,8 @@ func PodWindow(myApp fyne.App) {
 		exitButton,
 		widget.NewSeparator(),
 		secondCard,
+		contextCheck,
 		startButton,
-		widget.NewSeparator(),
-		fifthCard,
-		jdocsNowButton,
 	))
 
 	window.SetContent(stuffContainer)
@@ -141,6 +129,33 @@ func PostmDNS() error {
 	}
 }
 
+// what if i constantly have an mDNS browser, and post on the network right when it sees a new vector on the net?
+
+func PostmDNSWhenNewVector() {
+	for {
+		resolver, _ := zeroconf.NewResolver(nil)
+		entries := make(chan *zeroconf.ServiceEntry)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+		err := resolver.Browse(ctx, "_ankivector._tcp", "local.", entries)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		for entry := range entries {
+			if strings.Contains(entry.Service, "ankivector") {
+				logger.Println("New vector discovered on the network! posting mDNS...")
+				time.Sleep(time.Second)
+				go PostmDNS()
+				defer cancel()
+				return
+			}
+		}
+		cancel()
+		logger.Println("done")
+	}
+
+}
+
 func DeleteStaticContent() {
 	os.RemoveAll(filepath.Join(DataPath, "/static"))
 }
@@ -152,6 +167,7 @@ func NeedUnzip() bool {
 	if err != nil {
 		return true
 	}
+	fmt.Println(currentVersion, string(versionFileBytes))
 	if strings.TrimSpace(currentVersion) == strings.TrimSpace(string(versionFileBytes)) {
 		return false
 	}

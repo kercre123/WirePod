@@ -4,12 +4,17 @@ go 1.21.4
 
 require (
 	fyne.io/fyne/v2 v2.4.2
+	github.com/digital-dream-labs/api v0.0.0-20210824232136-8cc90c1bb12c
+	github.com/digital-dream-labs/hugh v0.0.0-20210210154335-f4159b9fcd5f
 	github.com/fforchino/vector-go-sdk v0.0.0-20231108155304-62168f3595d6
 	github.com/getlantern/systray v1.2.2
 	github.com/go-ole/go-ole v1.3.0
 	github.com/kercre123/wire-pod/chipper v1.0.2
 	github.com/kercre123/zeroconf v1.0.1
+	github.com/ncruces/zenity v0.10.10
+	github.com/soheilhy/cmux v0.1.5
 	github.com/wlynxg/anet v0.0.1
+	golang.org/x/sys v0.15.0
 )
 
 require (
@@ -21,8 +26,6 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dchest/jsmin v0.0.0-20220218165748-59f39799265f // indirect
-	github.com/digital-dream-labs/api v0.0.0-20210824232136-8cc90c1bb12c // indirect
-	github.com/digital-dream-labs/hugh v0.0.0-20210210154335-f4159b9fcd5f // indirect
 	github.com/digital-dream-labs/opus-go v0.0.0-20201230195736-934a8a9e0a1e // indirect
 	github.com/fredbi/uri v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
@@ -56,7 +59,6 @@ require (
 	github.com/maxhawkins/go-webrtcvad v0.0.0-20210121163624-be60036f3083 // indirect
 	github.com/miekg/dns v1.1.57 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/ncruces/zenity v0.10.10 // indirect
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -65,7 +67,6 @@ require (
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
-	github.com/soheilhy/cmux v0.1.5 // indirect
 	github.com/soundhound/houndify-sdk-go v0.3.5 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
@@ -85,7 +86,6 @@ require (
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.16.0 // indirect
 	google.golang.org/genproto v0.0.0-20231127180814-3a041ad873d4 // indirect
