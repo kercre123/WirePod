@@ -41,11 +41,6 @@ func IsConnedToWifi() bool {
 }
 
 func main() {
-	go PostmDNSWhenNewVector()
-	go func() {
-		PingJdocsInit()
-		PingJdocsStart()
-	}()
 	myApp := app.New()
 	DataPath = filepath.Dir(myApp.Storage().RootURI().Path())
 	logger.Println("DATAPATH: " + DataPath)
@@ -97,11 +92,16 @@ func PodWindow(myApp fyne.App) {
 	var startButton *widget.Button
 	startButton = widget.NewButton("Start", func() {
 		if !IsConnedToWifi() {
-			dialog.ShowCustom("this device must be connected to Wi-Fi first", "OK", container.NewWithoutLayout(), window)
+			dialog.ShowCustom("This device must be connected to Wi-Fi first", "OK", container.NewWithoutLayout(), window)
 			return
 		}
 		secondCard.SetSubTitle("Running!")
 		go func() {
+			go PostmDNSWhenNewVector()
+			go func() {
+				PingJdocsInit()
+				PingJdocsStart()
+			}()
 			hyprLink.Show()
 			linkLabel.Show()
 			startButton.Disable()
