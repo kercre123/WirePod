@@ -14,7 +14,7 @@ import (
 	"github.com/digital-dream-labs/api/go/tokenpb"
 	"github.com/digital-dream-labs/hugh/log"
 	"github.com/getlantern/systray"
-	"github.com/grandcat/zeroconf"
+	"github.com/kercre123/zeroconf"
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
 	chipperserver "github.com/kercre123/wire-pod/chipper/pkg/servers/chipper"
 	jdocsserver "github.com/kercre123/wire-pod/chipper/pkg/servers/jdocs"

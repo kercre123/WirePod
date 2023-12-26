@@ -12,3 +12,5 @@
 /android/key/ks.jks
 /android/key/passwd
 /android/resources/version
+.DS_Store
+.vscode
