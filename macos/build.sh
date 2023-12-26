@@ -3,26 +3,30 @@
 set -e
 
 export PODVER="$1"
+export ARCH="$2"
 
 if [[ ${PODVER} == "" ]]; then
 	echo "You must provide a version (v1.0.0)."
 	exit 0
 fi
 
-sudo -u $SUDO_USER brew install autoconf automake libtool create-dmg go wget pkg-config
+sudo -u $SUDO_USER brew install autoconf automake libtool create-dmg wget pkg-config
 
 export ORIGDIR="$(pwd)"
 export PODLIBS="${ORIGDIR}/libs"
 
 function buildApp() {
     echo
-    echo "building for $1"
+    echo "Building for $1"
     echo
 
     if [[ $1 == "arm64" ]]; then
         export TARGET="aarch64-apple-darwin"
-    else
+    elif [[ $1 == "amd64" ]]; then
         export TARGET="x86_64-apple-darwin"
+    else
+        echo "You must provide a valid architecture (arm64/amd64)."
+        exit 1
     fi
     export CC="clang -target ${TARGET}"
     export CXX="clang++ -target ${TARGET}"
@@ -126,7 +130,7 @@ function buildApp() {
 
 function buildDmg() {
     echo
-    echo "creating dmg for $1"
+    echo "Creating dmg for $1"
     echo
     sudo create-dmg \
     --volname "WirePod Installer" \
@@ -141,7 +145,13 @@ function buildDmg() {
 }
 
 rm -rf target
-buildApp "arm64"
-buildApp "amd64"
-buildDmg "arm64"
-buildDmg "amd64"
+if [[ ${ARCH} == "" ]]; then
+    echo "No architecture specified. Building for both arm64 and amd64."
+    buildApp "arm64"
+    buildApp "amd64"
+    buildDmg "arm64"
+    buildDmg "amd64"
+else
+    buildApp ${ARCH}
+    buildDmg ${ARCH}
+fi

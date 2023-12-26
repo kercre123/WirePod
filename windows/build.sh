@@ -3,8 +3,8 @@
 export BUILDFILES="./cmd"
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
-    export CC=/usr/local/bin/x86_64-w64-mingw32-gcc
-    export CXX=/usr/local/bin/x86_64-w64-mingw32-g++
+    export CC=x86_64-w64-mingw32-gcc
+    export CXX=x86_64-w64-mingw32-g++
 else
     export CC=/usr/bin/x86_64-w64-mingw32-gcc
     export CXX=/usr/bin/x86_64-w64-mingw32-g++
@@ -26,7 +26,7 @@ export PODLIBS="${ORIGDIR}/libs"
 
 mkdir -p "${PODLIBS}"
 
-if [[ ! -d ogg ]] || [[ ! -d "${PODLIBS}/ogg" ]]; then
+if [[ ! -d "${PODLIBS}/ogg" ]]; then
     echo "ogg directory doesn't exist. cloning and building"
     rm -rf ogg
     git clone https://github.com/xiph/ogg --depth=1
@@ -38,7 +38,7 @@ if [[ ! -d ogg ]] || [[ ! -d "${PODLIBS}/ogg" ]]; then
     cd "${ORIGDIR}"
 fi
 
-if [[ ! -d opus ]] || [[ ! -d "${PODLIBS}/opus" ]]; then
+if [[ ! -d "${PODLIBS}/opus" ]]; then
     echo "opus directory doesn't exist. cloning and building"
     rm -rf opus
     git clone https://github.com/xiph/opus --depth=1
@@ -60,6 +60,7 @@ if [[ ! -d ${PODLIBS}/vosk ]]; then
 fi
 
 export GOOS=windows
+export GOARCH=amd64
 export ARCHITECTURE=amd64
 export GO_TAGS="nolibopusfile"
 

@@ -13,3 +13,4 @@
 /android/key/passwd
 /android/resources/version
 .DS_Store
+.vscode
