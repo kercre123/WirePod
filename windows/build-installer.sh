@@ -36,7 +36,7 @@ x86_64-w64-mingw32-windres installer/rc/app.rc -O coff -o installer/app.syso
 
 go build \
 -ldflags "-H=windowsgui" \
--o WirePod-win-${GOARCH}-$1.exe \
+-o WirePodInstaller-${PODVER}.exe \
 ${BUILDFILES}
 
 #upx windows/wire-pod-installer.exe
