@@ -43,7 +43,7 @@ jobs:
       - name: Build for Windows
         run: cd windows && sudo ./build-installer.sh ${{ github.ref_name }} && sudo ./build.sh
       - name: Copy Windows installer to default working directory
-        run: cp windows/wire-pod-win-amd64.zip . && cp windows/WirePod-win-amd64-${{ github.ref_name }}.exe .
+        run: cp windows/wire-pod-win-amd64.zip . && cp windows/WirePodInstaller-${{ github.ref_name }}.exe .
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
@@ -52,5 +52,5 @@ jobs:
           files: |
             WirePod-darwin-arm64-${{ github.ref_name }}.dmg
             WirePod-darwin-amd64-${{ github.ref_name }}.dmg
-            WirePod-win-amd64-${{ github.ref_name }}.exe
+            WirePodInstaller-${{ github.ref_name }}.exe
             wire-pod-win-amd64.zip
