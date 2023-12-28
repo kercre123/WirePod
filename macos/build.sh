@@ -73,6 +73,7 @@ function buildApp() {
 
     go build \
     -tags nolibopusfile \
+    -ldflags "-w -s" \
     -o target/$1/WirePod.app/Contents/MacOS/WirePod \
     ./cmd
 

@@ -35,7 +35,7 @@ fi
 x86_64-w64-mingw32-windres installer/rc/app.rc -O coff -o installer/app.syso
 
 go build \
--ldflags "-H=windowsgui" \
+-ldflags "-H=windowsgui -w -s" \
 -o WirePodInstaller-${PODVER}.exe \
 ${BUILDFILES}
 
