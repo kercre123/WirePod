@@ -139,7 +139,6 @@ function buildDmg() {
     --icon "WirePod.app" 200 200 \
     --hide-extension "WirePod.app" \
     --app-drop-link 600 200 \
-    --hdiutil-quiet \
     target/$1/WirePod-darwin-$1-${PODVER}.dmg \
     target/$1/
 }
