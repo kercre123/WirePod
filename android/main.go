@@ -16,6 +16,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/kercre123/wire-pod/chipper/pkg/initwirepod"
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
@@ -42,6 +43,7 @@ func IsConnedToWifi() bool {
 
 func main() {
 	myApp := app.New()
+	myApp.Settings().SetTheme(theme.DarkTheme())
 	DataPath = filepath.Dir(myApp.Storage().RootURI().Path())
 	logger.Println("DATAPATH: " + DataPath)
 	version := myApp.Metadata().Version
@@ -141,10 +143,10 @@ func PostmDNS() error {
 	for {
 		ipAddr := botsetup.GetOutboundIP().String()
 		server, _ := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", mdnsport, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 3)
 		server.Shutdown()
 		server = nil
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Second)
 	}
 }
 
@@ -163,7 +165,7 @@ func PostmDNSWhenNewVector() {
 		for entry := range entries {
 			if strings.Contains(entry.Service, "ankivector") {
 				logger.Println("New vector discovered on the network! posting mDNS...")
-				time.Sleep(time.Second)
+				time.Sleep(time.Second / 3)
 				go PostmDNS()
 				defer cancel()
 				return
