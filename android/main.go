@@ -84,9 +84,9 @@ func PodWindow(myApp fyne.App) {
 	linkLabel.Hide()
 
 	var hyprLink *widget.Hyperlink
-	hyprLink = widget.NewHyperlink("http://"+botsetup.GetOutboundIP().String()+":8080", &url.URL{
+	hyprLink = widget.NewHyperlink("test", &url.URL{
 		Scheme: "http",
-		Host:   botsetup.GetOutboundIP().String() + ":8080",
+		Host:   "",
 	})
 	hyprLink.Hide()
 
@@ -104,6 +104,10 @@ func PodWindow(myApp fyne.App) {
 				PingJdocsInit()
 				PingJdocsStart()
 			}()
+			hyprLink = widget.NewHyperlink("http://"+botsetup.GetOutboundIP().String()+":8080", &url.URL{
+				Scheme: "http",
+				Host:   botsetup.GetOutboundIP().String() + ":8080",
+			})
 			hyprLink.Show()
 			linkLabel.Show()
 			startButton.Disable()

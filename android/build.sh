@@ -48,7 +48,7 @@ GOOS=android GOARCH=arm64 $HOME/go/bin/fyne package -os android/arm64 -appID com
 cp WirePod.apk ../
 cd ..
 echo "Building WirePod for android/arm64..."
-GOOS=android GOARCH=arm64 go build -buildmode=c-shared -o libWirePod-arm64.so -tags nolibopusfile
+GOOS=android GOARCH=arm64 go build -buildmode=c-shared -ldflags="-s -w" -o libWirePod-arm64.so -tags nolibopusfile
 export CC=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi16-clang
 export CXX=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi16-clang++
 export CGO_ENABLED=1
@@ -56,7 +56,7 @@ export CGO_LDFLAGS="-L$(pwd)/built-libs/armv7/lib"
 export CGO_CFLAGS="-I$(pwd)/built-libs/armv7/include"
 echo "Building WirePod for android/arm (GOARM=7)..."
 #GOARCH=arm GOARM=7 GOOS=android $HOME/go/bin/fyne build --os android -o libWirePod-armv7.so -tags nolibopusfile
-GOOS=android GOARCH=arm GOARM=7 go build -buildmode=c-shared -o libWirePod-armv7.so -tags nolibopusfile
+GOOS=android GOARCH=arm GOARM=7 go build -buildmode=c-shared -ldflags="-s -w" -o libWirePod-armv7.so -tags nolibopusfile
 echo "Putting libraries in vessel APK..."
 rm -rf tmp
 mkdir -p tmp

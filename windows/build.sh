@@ -73,13 +73,13 @@ x86_64-w64-mingw32-windres cmd/rc/app.rc -O coff -o cmd/app.syso
 
 go build \
 -tags ${GO_TAGS} \
--ldflags "-H=windowsgui" \
+-ldflags "-H=windowsgui -w -s" \
 -o chipper.exe \
 ${BUILDFILES}
 
 go build \
 -tags ${GO_TAGS} \
--ldflags "-H=windowsgui" \
+-ldflags "-H=windowsgui -w -s" \
 -o uninstall.exe \
 ./uninstall/main.go
 
