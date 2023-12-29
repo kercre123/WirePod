@@ -38,8 +38,8 @@ jobs:
           key: ${{ runner.os }}-libs-${{ hashFiles('**/go.sum') }}
       - name: Build for macOS
         run: cd macos && sudo ./build.sh ${{ github.ref_name }}
-      - name: Copy macOS installers to default working directory
-        run: find macos/target -name \*.dmg -exec cp {} . \;
+      - name: Copy macOS installer to default working directory
+        run: cp macos/target/WirePod-${{ github.ref_name }}.dmg .
       - name: Build for Windows
         run: cd windows && sudo ./build-installer.sh ${{ github.ref_name }} && sudo ./build.sh
       - name: Copy Windows installer to default working directory
@@ -50,7 +50,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            WirePod-darwin-arm64-${{ github.ref_name }}.dmg
-            WirePod-darwin-amd64-${{ github.ref_name }}.dmg
+            WirePod-${{ github.ref_name }}.dmg
             WirePodInstaller-${{ github.ref_name }}.exe
             wire-pod-win-amd64.zip
