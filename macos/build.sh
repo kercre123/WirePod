@@ -59,6 +59,8 @@ function buildApp() {
     echo "Building app"
     echo
 
+    mkdir -p ${PODLIBS}
+
     if [[ ! -d opus ]]; then
         echo "opus directory doesn't exist. cloning"
         rm -rf opus
@@ -67,7 +69,7 @@ function buildApp() {
     fi
 
     if [[ ! -d ${PODLIBS}/vosk ]]; then
-        echo "getting vosk from alphacep releases page"
+        echo "getting vosk from alphacep releases page"  
         cd ${PODLIBS}
         wget https://github.com/alphacep/vosk-api/releases/download/v0.3.42/vosk-osx-0.3.42.zip
         unzip vosk-osx-0.3.42.zip
