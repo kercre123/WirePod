@@ -31,6 +31,11 @@ function buildBinary() {
     export CXX="clang++ -target ${TARGET} -mmacosx-version-min=11"
 
     if [[ ! -d ${PODLIBS}/opus/$1 ]]; then
+        if [[ ! -d opus ]]; then
+            echo "opus directory doesn't exist. cloning"
+            rm -rf opus
+            git clone https://github.com/xiph/opus --depth=1
+        fi
         cd opus
         ./autogen.sh
         ./configure --host=${TARGET} --prefix="${PODLIBS}/opus/$1" --disable-doc --disable-extra-programs
@@ -60,13 +65,6 @@ function buildApp() {
     echo
 
     mkdir -p ${PODLIBS}
-
-    if [[ ! -d opus ]]; then
-        echo "opus directory doesn't exist. cloning"
-        rm -rf opus
-        git clone https://github.com/xiph/opus --depth=1
-        cd ${ORIGDIR}
-    fi
 
     if [[ ! -d ${PODLIBS}/vosk ]]; then
         echo "getting vosk from alphacep releases page"  
