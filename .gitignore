@@ -4,7 +4,8 @@
 /windows/ogg
 /macos/libs
 /macos/target
-/macos/ogg
+/macos/opus
+/macos/tmp
 /windows/tmp
 /windows/libs
 /windows/*.zip

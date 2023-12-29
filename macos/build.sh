@@ -3,7 +3,6 @@
 set -e
 
 export PODVER="$1"
-export ARCH="$2"
 
 if [[ ${PODVER} == "" ]]; then
 	echo "You must provide a version (v1.0.0)."
@@ -15,9 +14,9 @@ sudo -u $SUDO_USER brew install autoconf automake libtool create-dmg wget pkg-co
 export ORIGDIR="$(pwd)"
 export PODLIBS="${ORIGDIR}/libs"
 
-function buildApp() {
+function buildBinary() {
     echo
-    echo "Building for $1"
+    echo "Building $1 binary"
     echo
 
     if [[ $1 == "arm64" ]]; then
@@ -28,18 +27,42 @@ function buildApp() {
         echo "You must provide a valid architecture (arm64/amd64)."
         exit 1
     fi
-    export CC="clang -target ${TARGET}"
-    export CXX="clang++ -target ${TARGET}"
+    export CC="clang -target ${TARGET} -mmacosx-version-min=11"
+    export CXX="clang++ -target ${TARGET} -mmacosx-version-min=11"
 
     if [[ ! -d ${PODLIBS}/opus/$1 ]]; then
-        echo "opus directory doesn't exist. cloning and building"
-        mkdir -p ${PODLIBS}/opus/$1
-        cd ${PODLIBS}/opus/$1
-        git clone https://github.com/xiph/opus . --depth=1
+        cd opus
         ./autogen.sh
-        ./configure --host=${TARGET} --prefix="${PODLIBS}/opus/$1"
+        ./configure --host=${TARGET} --prefix="${PODLIBS}/opus/$1" --disable-doc --disable-extra-programs
         make -j
         make install
+        cd ${ORIGDIR}
+    fi
+
+    export GOOS=darwin
+    export GOARCH=$1
+    export CGO_ENABLED=1
+    export CGO_LDFLAGS="-L${PODLIBS}/opus/$1/lib -L${PODLIBS}/vosk -mmacosx-version-min=11"
+    export CGO_CFLAGS="-I${PODLIBS}/opus/$1/include -I${PODLIBS}/vosk -mmacosx-version-min=11"
+    export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${PODLIBS}/opus/$1/lib/pkgconfig
+    export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
+
+    go build \
+    -tags nolibopusfile \
+    -ldflags "-w -s" \
+    -o tmp/WirePod-$1 \
+    ./cmd
+}
+
+function buildApp() {
+    echo
+    echo "Building app"
+    echo
+
+    if [[ ! -d opus ]]; then
+        echo "opus directory doesn't exist. cloning"
+        rm -rf opus
+        git clone https://github.com/xiph/opus --depth=1
         cd ${ORIGDIR}
     fi
 
@@ -52,29 +75,25 @@ function buildApp() {
         cd ${ORIGDIR}
     fi
 
-    export GOARCH=$1
-    export CGO_ENABLED=1
-    export CGO_LDFLAGS="-L${PODLIBS}/opus/$1/lib -L${PODLIBS}/vosk -mmacosx-version-min=10.10"
-    export CGO_CFLAGS="-I${PODLIBS}/opus/$1/include -I${PODLIBS}/vosk -mmacosx-version-min=10.10"
-    export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${PODLIBS}/opus/$1/lib/pkgconfig
-    export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
-
-    APPDIR=target/$1/WirePod.app/Contents
+    APPDIR=target/WirePod.app/Contents
     PLISTFILE=${APPDIR}/Info.plist
+    MACOS=${APPDIR}/MacOS
     RESOURCES=${APPDIR}/Resources
     FRAMEWORKS=${APPDIR}/Frameworks
     CHIPPER=${APPDIR}/Frameworks/chipper
     VECTOR_CLOUD=${APPDIR}/Frameworks/vector-cloud
 
+    mkdir -p ${MACOS}
     mkdir -p ${RESOURCES}
     mkdir -p ${FRAMEWORKS}
     mkdir -p ${CHIPPER}
     mkdir -p ${VECTOR_CLOUD}/build
 
-    go build \
-    -tags nolibopusfile \
-    -o target/$1/WirePod.app/Contents/MacOS/WirePod \
-    ./cmd
+    buildBinary "arm64"
+    buildBinary "amd64"
+
+    sudo lipo -create ${PODLIBS}/opus/arm64/lib/libopus.0.dylib ${PODLIBS}/opus/amd64/lib/libopus.0.dylib -output ${PODLIBS}/opus/libopus.0.dylib
+    sudo lipo -create tmp/WirePod-arm64 tmp/WirePod-amd64 -output ${MACOS}/WirePod
 
     echo "<?xml version="1.0" encoding="UTF-8"?>" > $PLISTFILE
     echo "<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">" >> $PLISTFILE
@@ -108,7 +127,7 @@ function buildApp() {
     cp -r ../icons/* ${RESOURCES}
     cp -r ../icons ${RESOURCES}/
     echo "${PODVER}" > ${RESOURCES}/version
-    cp ${PODLIBS}/opus/$1/lib/libopus.0.dylib ${FRAMEWORKS}    
+    cp ${PODLIBS}/opus/libopus.0.dylib ${FRAMEWORKS}    
     cp ${PODLIBS}/vosk/libvosk.dylib ${FRAMEWORKS}
     cp ${CHPATH}/weather-map.json ${CHIPPER}
     cp -r ${CHPATH}/intent-data ${CHIPPER}
@@ -118,7 +137,7 @@ function buildApp() {
     cp ${CLPATH}/pod-bot-install.sh ${VECTOR_CLOUD}
 
     sudo install_name_tool \
-    -change ${PODLIBS}/opus/$1/lib/libopus.0.dylib \
+    -change ${PODLIBS}/opus/lib/libopus.0.dylib \
     @executable_path/../Frameworks/libopus.0.dylib \
     ${APPDIR}/MacOS/WirePod
 
@@ -130,7 +149,7 @@ function buildApp() {
 
 function buildDmg() {
     echo
-    echo "Creating dmg for $1"
+    echo "Creating dmg"
     echo
     sudo create-dmg \
     --volname "WirePod Installer" \
@@ -139,18 +158,10 @@ function buildDmg() {
     --icon "WirePod.app" 200 200 \
     --hide-extension "WirePod.app" \
     --app-drop-link 600 200 \
-    target/$1/WirePod-darwin-$1-${PODVER}.dmg \
-    target/$1/
+    target/WirePod-${PODVER}.dmg \
+    target/
 }
 
-rm -rf target
-if [[ ${ARCH} == "" ]]; then
-    echo "No architecture specified. Building for both arm64 and amd64."
-    buildApp "arm64"
-    buildApp "amd64"
-    buildDmg "arm64"
-    buildDmg "amd64"
-else
-    buildApp ${ARCH}
-    buildDmg ${ARCH}
-fi
+rm -rf target tmp
+buildApp
+buildDmg
