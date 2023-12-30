@@ -137,7 +137,7 @@ function buildApp() {
     cp ${CLPATH}/pod-bot-install.sh ${VECTOR_CLOUD}
 
     sudo install_name_tool \
-    -change ${PODLIBS}/opus/lib/libopus.0.dylib \
+    -change ${PODLIBS}/opus/arm64/lib/libopus.0.dylib \
     @executable_path/../Frameworks/libopus.0.dylib \
     ${APPDIR}/MacOS/WirePod
 
