@@ -153,14 +153,14 @@ func StartFromProgramInit(sttInitFunc func() error, sttHandlerFunc interface{}, 
 
 func PostmDNS() {
 	logger.Println("Registering escapepod.local on network (every 10 seconds)")
-	mdnsport := 443
+	mdnsport := 8084
 	for {
 		ipAddr := botsetup.GetOutboundIP().String()
 		server, _ := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", mdnsport, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 4)
 		server.Shutdown()
 		server = nil
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Second/3)
 	}
 }
 

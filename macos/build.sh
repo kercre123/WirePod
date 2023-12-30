@@ -142,6 +142,11 @@ function buildApp() {
     ${APPDIR}/MacOS/WirePod
 
     sudo install_name_tool \
+    -change ${PODLIBS}/opus/amd64/lib/libopus.0.dylib \
+    @executable_path/../Frameworks/libopus.0.dylib \
+    ${APPDIR}/MacOS/WirePod
+
+    sudo install_name_tool \
     -change libvosk.dylib \
     @executable_path/../Frameworks/libvosk.dylib \
     ${APPDIR}/MacOS/WirePod
