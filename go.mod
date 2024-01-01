@@ -4,6 +4,7 @@ go 1.21.4
 
 require (
 	fyne.io/fyne/v2 v2.4.2
+	gioui.org v0.4.1
 	github.com/digital-dream-labs/api v0.0.0-20210824232136-8cc90c1bb12c
 	github.com/digital-dream-labs/hugh v0.0.0-20210210154335-f4159b9fcd5f
 	github.com/fforchino/vector-go-sdk v0.0.0-20231108155304-62168f3595d6
@@ -19,6 +20,8 @@ require (
 
 require (
 	fyne.io/systray v1.10.1-0.20231115130155-104f5ef7839e // indirect
+	gioui.org/cpu v0.0.0-20210817075930-8d6a761490d2 // indirect
+	gioui.org/shader v1.0.8 // indirect
 	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20231202071711-9a357b53e9c9 // indirect
@@ -42,7 +45,7 @@ require (
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20231124074035-2de0cf0c80af // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/go-text/render v0.0.0-20230619120952-35bccb6164b8 // indirect
-	github.com/go-text/typesetting v0.0.0-20230616162802-9c17dd34aa4a // indirect
+	github.com/go-text/typesetting v0.0.0-20230803102845-24e03d8b5372 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
@@ -82,6 +85,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/exp v0.0.0-20231206192017-f3f8817b8deb // indirect
+	golang.org/x/exp/shiny v0.0.0-20230817173708-d852ddb80c63 // indirect
 	golang.org/x/image v0.14.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
 	golang.org/x/mod v0.14.0 // indirect
