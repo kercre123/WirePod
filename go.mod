@@ -9,7 +9,7 @@ require (
 	github.com/fforchino/vector-go-sdk v0.0.0-20231108155304-62168f3595d6
 	github.com/getlantern/systray v1.2.2
 	github.com/go-ole/go-ole v1.3.0
-	github.com/kercre123/wire-pod/chipper v1.0.9
+	github.com/kercre123/wire-pod/chipper v1.1.0
 	github.com/kercre123/zeroconf v1.0.1
 	github.com/ncruces/zenity v0.10.10
 	github.com/soheilhy/cmux v0.1.5
