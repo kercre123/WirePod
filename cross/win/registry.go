@@ -15,7 +15,7 @@ import (
 // UninstallString (is.Where + uninstall.exe)
 // InstallLocation (is.Where)
 var Win_UninstallKeyKey = registry.LOCAL_MACHINE
-var Win_UninstallKeyPath = `Software\Microsoft\Windows\CurrentVersion\Uninstall\wire-pod`
+var Win_UninstallKeyPath = `Software\Microsoft\Windows\CurrentVersion\Uninstall\WirePod`
 var Win_UninstallInstallerPerms uint32 = registry.ALL_ACCESS
 
 // shouldn't ever need to access uninstall path in pod software, but go off i guess

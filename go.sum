@@ -368,6 +368,10 @@ github.com/kercre123/wire-pod/chipper v1.0.9 h1:p/UVxGsLsISH/JKVld9yLHDDNAkcQm5/
 github.com/kercre123/wire-pod/chipper v1.0.9/go.mod h1:SL5Ioh1vcEWPSb0N7DoaRBIQ5A7XUVYQu8o1I5Cyum8=
 github.com/kercre123/wire-pod/chipper v1.1.0 h1:jJf7ygd3c/Jka2v5k+AcS42IEzkB1cfw67CCXL5oP9Y=
 github.com/kercre123/wire-pod/chipper v1.1.0/go.mod h1:SL5Ioh1vcEWPSb0N7DoaRBIQ5A7XUVYQu8o1I5Cyum8=
+github.com/kercre123/wire-pod/chipper v1.1.1 h1:p7vUKNHoXUhThZmp4jpC9BWt7t/tLadACHVhlpwjtQE=
+github.com/kercre123/wire-pod/chipper v1.1.1/go.mod h1:XL+V/QyH5UgOtYTrbQuHteHP24CF1Frmmmj2UZm7f7k=
+github.com/kercre123/wire-pod/chipper v1.1.2 h1:FvmrrT//5EH9d3GT52IVCikxJdkUenOZBfun9YG8Rl0=
+github.com/kercre123/wire-pod/chipper v1.1.2/go.mod h1:XL+V/QyH5UgOtYTrbQuHteHP24CF1Frmmmj2UZm7f7k=
 github.com/kercre123/zeroconf v1.0.1 h1:Mbd8mN6xnNWYIqBN38x3jJjiPP2RmK4orzbGZsa1EOY=
 github.com/kercre123/zeroconf v1.0.1/go.mod h1:qYGgej0DBUELb5p0zVe8yvz3NIwJs+ws9/QD6FJOCS8=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=

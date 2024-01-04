@@ -3,14 +3,12 @@ package main
 import (
 	"archive/zip"
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -20,14 +18,12 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/kercre123/wire-pod/chipper/pkg/initwirepod"
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/mdnshandler"
 	"github.com/kercre123/wire-pod/chipper/pkg/vars"
 	botsetup "github.com/kercre123/wire-pod/chipper/pkg/wirepod/setup"
 	wirepod_vosk "github.com/kercre123/wire-pod/chipper/pkg/wirepod/stt/vosk"
-	"github.com/kercre123/zeroconf"
 	"github.com/wlynxg/anet"
 )
-
-var PostingMDNS bool
 
 var DataPath string
 
@@ -99,7 +95,7 @@ func PodWindow(myApp fyne.App) {
 		}
 		secondCard.SetSubTitle("Running!")
 		go func() {
-			go PostmDNSWhenNewVector()
+			go mdnshandler.PostmDNS()
 			go func() {
 				PingJdocsInit()
 				PingJdocsStart()
@@ -136,50 +132,6 @@ func PodWindow(myApp fyne.App) {
 	window.SetContent(stuffContainer)
 
 	window.Show()
-}
-
-func PostmDNS() error {
-	if PostingMDNS {
-		return nil
-	}
-	PostingMDNS = true
-	logger.Println("Registering escapepod.local on network (every minute)")
-	mdnsport := 8084
-	for {
-		ipAddr := botsetup.GetOutboundIP().String()
-		server, _ := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", mdnsport, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
-		time.Sleep(time.Second * 3)
-		server.Shutdown()
-		server = nil
-		time.Sleep(time.Second)
-	}
-}
-
-// what if i constantly have an mDNS browser, and post on the network right when it sees a new vector on the net?
-
-func PostmDNSWhenNewVector() {
-	for {
-		resolver, _ := zeroconf.NewResolver(nil)
-		entries := make(chan *zeroconf.ServiceEntry)
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
-		err := resolver.Browse(ctx, "_ankivector._tcp", "local.", entries)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		for entry := range entries {
-			if strings.Contains(entry.Service, "ankivector") {
-				logger.Println("New vector discovered on the network! posting mDNS...")
-				time.Sleep(time.Second / 3)
-				go PostmDNS()
-				defer cancel()
-				return
-			}
-		}
-		cancel()
-		logger.Println("done")
-	}
-
 }
 
 func DeleteStaticContent() {

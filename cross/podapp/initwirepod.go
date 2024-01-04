@@ -7,15 +7,14 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	chipperpb "github.com/digital-dream-labs/api/go/chipperpb"
 	"github.com/digital-dream-labs/api/go/jdocspb"
 	"github.com/digital-dream-labs/api/go/tokenpb"
 	"github.com/digital-dream-labs/hugh/log"
 	"github.com/getlantern/systray"
-	"github.com/kercre123/zeroconf"
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/mdnshandler"
 	chipperserver "github.com/kercre123/wire-pod/chipper/pkg/servers/chipper"
 	jdocsserver "github.com/kercre123/wire-pod/chipper/pkg/servers/jdocs"
 	tokenserver "github.com/kercre123/wire-pod/chipper/pkg/servers/token"
@@ -37,8 +36,6 @@ var serverTwo cmux.CMux
 var listenerOne net.Listener
 var listenerTwo net.Listener
 var voiceProcessor *wp.Server
-
-var epodIsPosting bool
 
 var NotSetUp string = "Wire-pod is not setup. Use the webserver at port " + vars.WebPort + " to set up wire-pod."
 
@@ -151,19 +148,6 @@ func StartFromProgramInit(sttInitFunc func() error, sttHandlerFunc interface{}, 
 	wpweb.StartWebServer()
 }
 
-func PostmDNS() {
-	logger.Println("Registering escapepod.local on network (every 10 seconds)")
-	mdnsport := 8084
-	for {
-		ipAddr := botsetup.GetOutboundIP().String()
-		server, _ := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", mdnsport, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
-		time.Sleep(time.Second * 4)
-		server.Shutdown()
-		server = nil
-		time.Sleep(time.Second/3)
-	}
-}
-
 func IfFileExist(name string) bool {
 	_, err := os.Stat(name)
 	if err != nil {
@@ -183,8 +167,8 @@ func RestartServer() {
 }
 
 func StartChipper(fromInit bool) {
-	if vars.APIConfig.Server.EPConfig && !epodIsPosting {
-		go PostmDNS()
+	if vars.APIConfig.Server.EPConfig {
+		go mdnshandler.PostmDNS()
 	}
 	// load certs
 	var certPub []byte
