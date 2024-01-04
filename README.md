@@ -11,5 +11,5 @@ Cross-platform code, resources, and builds for [wire-pod](https://github.com/ker
 
 -  macOS (arm64, amd64)
 -  Windows 10/11 (amd64)
--  Android 4.4 and above (only tested down to 5.0)
+-  Android 4.3 and above
 -  For Linux, use the instructions in wire-pod's wiki.
