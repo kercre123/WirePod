@@ -158,11 +158,12 @@ function buildDmg() {
     echo
     sudo create-dmg \
     --volname "WirePod Installer" \
-    --window-size 800 450 \
+    --window-size 1104 544 \
     --icon-size 100 \
-    --icon "WirePod.app" 200 200 \
+    --icon "WirePod.app" 343 269 \
     --hide-extension "WirePod.app" \
-    --app-drop-link 600 200 \
+    --background "viceyes.png" \
+    --app-drop-link 777 269 \
     target/WirePod-${PODVER}.dmg \
     target/
 }
