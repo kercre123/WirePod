@@ -9,8 +9,7 @@ require (
 	github.com/fforchino/vector-go-sdk v0.0.0-20231108155304-62168f3595d6
 	github.com/getlantern/systray v1.2.2
 	github.com/go-ole/go-ole v1.3.0
-	github.com/kercre123/wire-pod/chipper v1.1.2
-	github.com/kercre123/zeroconf v1.0.1
+	github.com/kercre123/wire-pod/chipper v1.1.3
 	github.com/ncruces/zenity v0.10.10
 	github.com/soheilhy/cmux v0.1.5
 	github.com/wlynxg/anet v0.0.1
@@ -55,6 +54,7 @@ require (
 	github.com/josephspurrier/goversioninfo v1.4.0 // indirect
 	github.com/jsummers/gobmp v0.0.0-20230614200233-a9de23ed2e25 // indirect
 	github.com/kercre123/vosk-api/go v1.0.2 // indirect
+	github.com/kercre123/zeroconf v1.0.1 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/maxhawkins/go-webrtcvad v0.0.0-20210121163624-be60036f3083 // indirect
 	github.com/miekg/dns v1.1.57 // indirect
