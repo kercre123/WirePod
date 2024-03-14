@@ -33,6 +33,12 @@ if [[ ! -f key/passwd ]]; then
 fi
 echo "Zipping static files and bundling..."
 cd resources
+rm -rf webroot intent-data epod pod-bot-install.sh weather-map.json
+cp -r ../../wire-pod/chipper/webroot .
+cp -r ../../wire-pod/chipper/intent-data .
+cp -r ../../wire-pod/chipper/epod .
+cp -r ../../wire-pod/vector-cloud/pod-bot-install.sh .
+cp -r ../../wire-pod/chipper/weather-map.json .
 echo $1 > version
 zip -r static.zip .
 cd ..
