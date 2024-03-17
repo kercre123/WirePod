@@ -9,7 +9,7 @@ require (
 	github.com/fforchino/vector-go-sdk v0.0.0-20231108155304-62168f3595d6
 	github.com/getlantern/systray v1.2.2
 	github.com/go-ole/go-ole v1.3.0
-	github.com/kercre123/wire-pod/chipper v1.1.5
+	github.com/kercre123/wire-pod/chipper v1.1.6
 	github.com/ncruces/zenity v0.10.10
 	github.com/soheilhy/cmux v0.1.5
 	github.com/wlynxg/anet v0.0.1
@@ -66,6 +66,7 @@ require (
 	github.com/randall77/makefat v0.0.0-20210315173500-7ddd0e42c844 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
+	github.com/sashabaranov/go-openai v1.20.4 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/soundhound/houndify-sdk-go v0.3.5 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
