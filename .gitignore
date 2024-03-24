@@ -13,5 +13,14 @@
 /android/key/ks.jks
 /android/key/passwd
 /android/resources/version
+/android/resources/intent-data
+/android/resources/webroot
+/android/resources/pod-bot-install.sh
+/android/resources/weather-map.json
+/debian/build
+/debian/built
+/debian/debcreate
+/debian/wire-pod-toolchain
+/debian/final
 .DS_Store
 .vscode

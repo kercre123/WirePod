@@ -12,6 +12,7 @@ import (
 	"github.com/digital-dream-labs/api/go/jdocspb"
 	"github.com/digital-dream-labs/api/go/tokenpb"
 	"github.com/digital-dream-labs/hugh/log"
+	"github.com/kercre123/wire-pod/chipper/pkg/initwirepod"
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
 	"github.com/kercre123/wire-pod/chipper/pkg/mdnshandler"
 	chipperserver "github.com/kercre123/wire-pod/chipper/pkg/servers/chipper"
@@ -89,7 +90,7 @@ func BeginWirepodSpecific(sttInitFunc func() error, sttHandlerFunc interface{}, 
 	voiceProcessor, err = wp.New(sttInitFunc, sttHandlerFunc, voiceProcessorName)
 	wpweb.SttInitFunc = sttInitFunc
 	go sdkWeb.BeginServer()
-	http.HandleFunc("/api-chipper/", ChipperHTTPApi)
+	http.HandleFunc("/api-chipper/", initwirepod.ChipperHTTPApi)
 	if err != nil {
 		return err
 	}
@@ -162,8 +163,8 @@ func StartChipper() {
 			certPriv, _ = os.ReadFile("./epod/ep.key")
 		} else {
 			var err error
-			certPub, _ = os.ReadFile("../certs/cert.crt")
-			certPriv, err = os.ReadFile("../certs/cert.key")
+			certPub, _ = os.ReadFile(vars.CertPath)
+			certPriv, err = os.ReadFile(vars.KeyPath)
 			if err != nil {
 				logger.Println("wire-pod is not setup.")
 				return
