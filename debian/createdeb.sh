@@ -201,7 +201,7 @@ function doVOSKbuild() {
             git clone https://github.com/alphacep/vosk-api --depth=1
         fi
         cd vosk-api/src
-        KALDI_ROOT=$KALDIROOT make -j8
+        KALDI_ROOT=$KALDIROOT make EXTRA_LDFLAGS="-static-libstdc++" -j8
     fi
     cd "${ORIGPATH}/build/${ARCH}"
     mkdir -p "${BPREFIX}/lib"
