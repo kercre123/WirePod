@@ -67,13 +67,13 @@ function prepareVOSKbuild_AMD64() {
         git clone -b v3.2.1  --single-branch https://github.com/alphacep/clapack 
         make -C OpenBLAS ONLY_CBLAS=1 DYNAMIC_ARCH=1 TARGET=NEHALEM USE_LOCKING=1 USE_THREAD=0 all 
         make -C OpenBLAS PREFIX=$(pwd)/OpenBLAS/install install 
-        mkdir -p clapack/BUILD && cd clapack/BUILD && cmake .. && make -j 10 && find . -name "*.a" | xargs cp -t ../../OpenBLAS/install/lib 
+        mkdir -p clapack/BUILD && cd clapack/BUILD && cmake .. && make -j 8 && find . -name "*.a" | xargs cp -t ../../OpenBLAS/install/lib 
         cd ${KALDIROOT}/tools
         git clone --single-branch https://github.com/alphacep/openfst openfst 
         cd openfst 
         autoreconf -i 
         CFLAGS="-g -O3" ./configure --prefix=${KALDIROOT}/tools/openfst --host=$PODHOST --enable-static --enable-shared --enable-far --enable-ngram-fsts --enable-lookahead-fsts --with-pic --disable-bin 
-        make -j 10 && make install 
+        make -j 8 && make install 
         cd ${KALDIROOT}/src 
         ./configure --mathlib=OPENBLAS_CLAPACK --shared --use-cuda=no --host=$PODHOST
         sed -i 's:-msse -msse2:-msse -msse2:g' kaldi.mk 
@@ -125,12 +125,12 @@ function prepareVOSKbuild_ARMARM64() {
         cd openfst
         autoreconf -i
         CFLAGS="-g -O3" ./configure --prefix=${KALDIROOT}/tools/openfst --enable-static --enable-shared --enable-far --enable-ngram-fsts --enable-lookahead-fsts --with-pic --disable-bin --host=${CROSS_TRIPLE} --build=x86-linux-gnu
-        make -j 10 && make install
+        make -j 8 && make install
         cd ${KALDIROOT}/src
         sed -i "s:TARGET_ARCH=\"\`uname -m\`\":TARGET_ARCH=$(echo $CROSS_TRIPLE|cut -d - -f 1):g" configure
         sed -i "s: -O1 : -O3 :g" makefiles/linux_openblas_arm.mk
         ./configure --mathlib=OPENBLAS_CLAPACK --shared --use-cuda=no
-        make -j 10 online2 lm rnnlm
+        make -j 8 online2 lm rnnlm
         find ${KALDIROOT} -name "*.o" -exec rm {} \;
         touch ${KALDIROOT}/KALDIBUILT
     fi
