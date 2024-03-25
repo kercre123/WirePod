@@ -22,5 +22,6 @@
 /debian/debcreate
 /debian/wire-pod-toolchain
 /debian/final
+/debian/wire-pod
 .DS_Store
 .vscode
