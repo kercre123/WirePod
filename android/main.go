@@ -1,231 +1,196 @@
 package main
 
 import (
-	"crypto/tls"
+	"archive/zip"
+	"bytes"
 	"fmt"
-	"net"
-	"net/http"
+	"io"
+	"net/url"
 	"os"
-	"runtime"
+	"path/filepath"
+	"strings"
 
-	chipperpb "github.com/digital-dream-labs/api/go/chipperpb"
-	"github.com/digital-dream-labs/api/go/jdocspb"
-	"github.com/digital-dream-labs/api/go/tokenpb"
-	"github.com/digital-dream-labs/hugh/log"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/widget"
+	"github.com/kercre123/wire-pod/chipper/pkg/initwirepod"
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
 	"github.com/kercre123/wire-pod/chipper/pkg/mdnshandler"
-	chipperserver "github.com/kercre123/wire-pod/chipper/pkg/servers/chipper"
-	jdocsserver "github.com/kercre123/wire-pod/chipper/pkg/servers/jdocs"
-	tokenserver "github.com/kercre123/wire-pod/chipper/pkg/servers/token"
 	"github.com/kercre123/wire-pod/chipper/pkg/vars"
-	wpweb "github.com/kercre123/wire-pod/chipper/pkg/wirepod/config-ws"
-	wp "github.com/kercre123/wire-pod/chipper/pkg/wirepod/preqs"
-	sdkWeb "github.com/kercre123/wire-pod/chipper/pkg/wirepod/sdkapp"
-	"github.com/soheilhy/cmux"
-
-	//	grpclog "github.com/digital-dream-labs/hugh/grpc/interceptors/logger"
-
-	grpcserver "github.com/digital-dream-labs/hugh/grpc/server"
+	botsetup "github.com/kercre123/wire-pod/chipper/pkg/wirepod/setup"
+	wirepod_vosk "github.com/kercre123/wire-pod/chipper/pkg/wirepod/stt/vosk"
+	"github.com/wlynxg/anet"
 )
 
-var PostingmDNS bool
+var DataPath string
 
-var serverOne cmux.CMux
-var serverTwo cmux.CMux
-var listenerOne net.Listener
-var listenerTwo net.Listener
-var voiceProcessor *wp.Server
-
-// grpcServer *grpc.Servervar
-var chipperServing bool = false
-
-func serveOk(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "ok")
-}
-
-func httpServe(l net.Listener) error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/ok:80", serveOk)
-	mux.HandleFunc("/ok", serveOk)
-	s := &http.Server{
-		Handler: mux,
+func IsConnedToWifi() bool {
+	ifaces, _ := anet.Interfaces()
+	for _, iface := range ifaces {
+		if iface.Name == "wlan0" {
+			return true
+		}
 	}
-	return s.Serve(l)
+	return false
 }
 
-func grpcServe(l net.Listener, p *wp.Server) error {
-	srv, err := grpcserver.New(
-		grpcserver.WithViper(),
-		grpcserver.WithReflectionService(),
-		grpcserver.WithInsecureSkipVerify(),
-	)
+func main() {
+	myApp := app.New()
+	myApp.Settings().SetTheme(theme.DarkTheme())
+	DataPath = filepath.Dir(myApp.Storage().RootURI().Path())
+	logger.Println("DATAPATH: " + DataPath)
+	version := myApp.Metadata().Version
+	if NeedUnzip(version) {
+		fmt.Println("Unzipping static content")
+		DeleteStaticContent()
+		DoUnzip()
+	}
+	vars.AndroidPath = DataPath
+	vars.Packaged = true
+	PodWindow(myApp)
+	myApp.Run()
+}
+
+func PodWindow(myApp fyne.App) {
+
+	window := myApp.NewWindow("pod")
+	window.SetMaster()
+
+	var stuffContainer fyne.CanvasObject
+
+	firstCard := widget.NewCard("WirePod", "", container.NewWithoutLayout())
+
+	exitButton := widget.NewButton("Exit", func() {
+		os.Exit(0)
+	})
+
+	contextCheck := widget.NewCheck("with specific grammer?", func(checked bool) {
+		if checked {
+			wirepod_vosk.GrammerEnable = true
+		} else {
+			wirepod_vosk.GrammerEnable = false
+		}
+	})
+
+	var linkLabel *widget.RichText
+	linkLabel = widget.NewRichTextWithText("Configuration/setup page:")
+	linkLabel.Hide()
+
+	var hyprLink *widget.Hyperlink
+	hyprLink = widget.NewHyperlink("test", &url.URL{
+		Scheme: "http",
+		Host:   "",
+	})
+	hyprLink.Hide()
+
+	secondCard := widget.NewCard("WirePod Control", "", container.NewWithoutLayout())
+	var startButton *widget.Button
+	startButton = widget.NewButton("Start", func() {
+		if !IsConnedToWifi() {
+			dialog.ShowCustom("This device must be connected to Wi-Fi first", "OK", container.NewWithoutLayout(), window)
+			return
+		}
+		secondCard.SetSubTitle("Running!")
+		go func() {
+			go mdnshandler.PostmDNS()
+			go func() {
+				PingJdocsInit()
+				PingJdocsStart()
+			}()
+			hyprLink.SetText("http://" + botsetup.GetOutboundIP().String() + ":8080")
+			hyprLink.SetURL(&url.URL{
+				Scheme: "http",
+				Host:   botsetup.GetOutboundIP().String() + ":8080",
+			})
+			hyprLink.Show()
+			linkLabel.Show()
+			startButton.Disable()
+			contextCheck.Disable()
+			initwirepod.StartFromProgramInit(wirepod_vosk.Init, wirepod_vosk.STT, wirepod_vosk.Name)
+			startButton.Enable()
+			contextCheck.Enable()
+			hyprLink.Hide()
+			linkLabel.Hide()
+			secondCard.SetSubTitle("wirepod failed :(")
+		}()
+	})
+
+	stuffContainer = container.NewVScroll(container.NewVBox(
+		firstCard,
+		exitButton,
+		widget.NewSeparator(),
+		secondCard,
+		linkLabel,
+		hyprLink,
+		contextCheck,
+		startButton,
+	))
+
+	window.SetContent(stuffContainer)
+
+	window.Show()
+}
+
+func DeleteStaticContent() {
+	os.RemoveAll(filepath.Join(DataPath, "/static"))
+}
+
+func NeedUnzip(version string) bool {
+	versionFilePath := filepath.Join(DataPath, "/static/version")
+	versionFileBytes, err := os.ReadFile(versionFilePath)
 	if err != nil {
-		log.Fatal(err)
+		return true
 	}
-
-	s, _ := chipperserver.New(
-		chipperserver.WithIntentProcessor(p),
-		chipperserver.WithKnowledgeGraphProcessor(p),
-		chipperserver.WithIntentGraphProcessor(p),
-	)
-
-	tokenServer := tokenserver.NewTokenServer()
-	jdocsServer := jdocsserver.NewJdocsServer()
-	//jdocsserver.IniToJson()
-
-	chipperpb.RegisterChipperGrpcServer(srv.Transport(), s)
-	jdocspb.RegisterJdocsServer(srv.Transport(), jdocsServer)
-	tokenpb.RegisterTokenServer(srv.Transport(), tokenServer)
-
-	return srv.Transport().Serve(l)
+	fmt.Println(version, string(versionFileBytes))
+	if strings.TrimSpace(version) == strings.TrimSpace(string(versionFileBytes)) {
+		return false
+	}
+	return true
 }
 
-func BeginWirepodSpecific(sttInitFunc func() error, sttHandlerFunc interface{}, voiceProcessorName string) error {
-	logger.Init()
+func DoUnzip() {
+	UnzipBytes(resourceStaticZip.Content(), filepath.Join(DataPath, "/static/"))
+}
 
-	// begin wirepod stuff
-	vars.Init()
-	var err error
-	voiceProcessor, err = wp.New(sttInitFunc, sttHandlerFunc, voiceProcessorName)
-	wpweb.SttInitFunc = sttInitFunc
-	go sdkWeb.BeginServer()
-	http.HandleFunc("/api-chipper/", ChipperHTTPApi)
+func UnzipBytes(zipBytes []byte, destDir string) error {
+	reader, err := zip.NewReader(bytes.NewReader(zipBytes), int64(len(zipBytes)))
 	if err != nil {
 		return err
 	}
+
+	for _, file := range reader.File {
+		logger.Println(file.Name)
+		path := filepath.Join(destDir, file.Name)
+		if file.FileInfo().IsDir() {
+			os.MkdirAll(path, os.ModePerm)
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
+			return err
+		}
+
+		outFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+		if err != nil {
+			return err
+		}
+
+		rc, err := file.Open()
+		if err != nil {
+			outFile.Close()
+			return err
+		}
+
+		_, err = io.Copy(outFile, rc)
+		outFile.Close()
+		rc.Close()
+
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
-}
-
-func StartFromProgramInit(sttInitFunc func() error, sttHandlerFunc interface{}, voiceProcessorName string) {
-	if runtime.GOOS == "android" || runtime.GOOS == "ios" {
-		os.Setenv("DEBUG_LOGGING", "true")
-		os.Setenv("STT_SERVICE", "vosk")
-	}
-	err := BeginWirepodSpecific(sttInitFunc, sttHandlerFunc, voiceProcessorName)
-	if err != nil {
-		logger.Println("\033[33m\033[1mWire-pod is not setup. Use the webserver at port 8080 to set up wire-pod.\033[0m")
-	} else if !vars.APIConfig.PastInitialSetup {
-		logger.Println("\033[33m\033[1mWire-pod is not setup. Use the webserver at port 8080 to set up wire-pod.\033[0m")
-	} else if (vars.APIConfig.STT.Service == "vosk" || vars.APIConfig.STT.Service == "whisper.cpp") && vars.APIConfig.STT.Language == "" {
-		logger.Println("\033[33m\033[1mLanguage value is blank, but STT service is " + vars.APIConfig.STT.Service + ". Reinitiating setup process.\033[0m")
-		logger.Println("\033[33m\033[1mWire-pod is not setup. Use the webserver at port 8080 to set up wire-pod.\033[0m")
-		vars.APIConfig.PastInitialSetup = false
-	} else {
-		go StartChipper()
-	}
-	// main thread is configuration ws
-	wpweb.StartWebServer()
-}
-
-func RestartServer() {
-	if chipperServing {
-		serverOne.Close()
-		serverTwo.Close()
-		listenerOne.Close()
-		listenerTwo.Close()
-	}
-	go StartChipper()
-}
-
-func StopServer() {
-	if chipperServing {
-		serverOne.Close()
-		serverTwo.Close()
-		listenerOne.Close()
-		listenerTwo.Close()
-	}
-}
-
-func StartChipper() {
-	// load certs
-	if vars.APIConfig.Server.EPConfig && runtime.GOOS != "android" {
-		go mdnshandler.PostmDNS()
-	}
-	var certPub []byte
-	var certPriv []byte
-	if runtime.GOOS == "android" || runtime.GOOS == "ios" {
-		if vars.APIConfig.Server.EPConfig {
-			certPub, _ = os.ReadFile(vars.AndroidPath + "/static/epod/ep.crt")
-			certPriv, _ = os.ReadFile(vars.AndroidPath + "/static/epod/ep.key")
-		} else {
-			var err error
-			certPub, _ = os.ReadFile(vars.AndroidPath + "/wire-pod/certs/cert.crt")
-			certPriv, err = os.ReadFile(vars.AndroidPath + "/wire-pod/certs/cert.key")
-			if err != nil {
-				logger.Println("wire-pod is not setup.")
-				return
-			}
-		}
-	} else {
-		if vars.APIConfig.Server.EPConfig {
-			certPub, _ = os.ReadFile("./epod/ep.crt")
-			certPriv, _ = os.ReadFile("./epod/ep.key")
-		} else {
-			var err error
-			certPub, _ = os.ReadFile("../certs/cert.crt")
-			certPriv, err = os.ReadFile("../certs/cert.key")
-			if err != nil {
-				logger.Println("wire-pod is not setup.")
-				return
-			}
-		}
-	}
-
-	logger.Println("Initiating TLS listener, cmux, gRPC handler, and REST handler")
-	cert, err := tls.X509KeyPair(certPub, certPriv)
-	if err != nil {
-		logger.Println(err)
-		os.Exit(1)
-	}
-	if runtime.GOOS == "android" && vars.APIConfig.Server.Port == "443" {
-		logger.Println("not starting chipper at port 443 because android")
-	} else {
-		logger.Println("Starting chipper server at port " + vars.APIConfig.Server.Port)
-		listenerOne, err = tls.Listen("tcp", ":"+vars.APIConfig.Server.Port, &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			CipherSuites: nil,
-		})
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	}
-	serverOne = cmux.New(listenerOne)
-	grpcListenerOne := serverOne.Match(cmux.HTTP2())
-	httpListenerOne := serverOne.Match(cmux.HTTP1Fast())
-	go grpcServe(grpcListenerOne, voiceProcessor)
-	go httpServe(httpListenerOne)
-
-	if vars.APIConfig.Server.EPConfig && os.Getenv("NO8084") != "true" {
-		logger.Println("Starting chipper server at port 8084 for 2.0.1 compatibility")
-		listenerTwo, err = tls.Listen("tcp", ":8084", &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			CipherSuites: nil,
-		})
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		serverTwo = cmux.New(listenerTwo)
-		grpcListenerTwo := serverTwo.Match(cmux.HTTP2())
-		httpListenerTwo := serverTwo.Match(cmux.HTTP1Fast())
-		go grpcServe(grpcListenerTwo, voiceProcessor)
-		go httpServe(httpListenerTwo)
-	}
-
-	fmt.Println("\033[33m\033[1mwire-pod started successfully!\033[0m")
-
-	chipperServing = true
-	if vars.APIConfig.Server.EPConfig && os.Getenv("NO8084") != "true" {
-		if runtime.GOOS != "android" {
-			go serverOne.Serve()
-		}
-		serverTwo.Serve()
-		logger.Println("Stopping chipper server")
-		chipperServing = false
-	} else {
-		serverOne.Serve()
-		logger.Println("Stopping chipper server")
-		chipperServing = false
-	}
 }
