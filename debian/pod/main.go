@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+	vars.IsPackagedLinux = true
 	verb := flag.Bool("verbose", true, "with/without debug logging")
 	justIP := flag.Bool("justip", false, "show just configuration page")
 	flag.Parse()
