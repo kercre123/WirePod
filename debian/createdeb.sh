@@ -19,6 +19,7 @@ if [[ $1 == "" ]]; then
 fi
 
 PODVERSION=$1
+echo "Building version: $PODVERSION"
 
 # gather compilers
 if [[ ! -d wire-pod-toolchain ]]; then
