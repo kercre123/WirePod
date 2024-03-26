@@ -2,7 +2,7 @@
 
 #set -e
 
-COMPILE_ARCHES=(amd64 armhf arm64)
+COMPILE_ARCHES=(amd64 armhf)
 
 ORIGPATH="$(pwd)"
 
@@ -178,6 +178,7 @@ function expToolchain() {
         export CROSS_TRIPLE=${PODHOST}
         export CROSS_COMPILE=${ARM64T}
         export GOARCH=arm64
+        export GOARM=""
         export GOOS=linux
         export ARCHFLAGS=""
     elif [[ $ARCH == "armhf" ]]; then
