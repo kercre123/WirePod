@@ -31,6 +31,7 @@ function createDEBIAN() {
     ARCH=$1
     mkdir -p ${DEBCREATEPATH}/${ARCH}/DEBIAN
     cp -rfp debfiles/postinst ${DEBCREATEPATH}/${ARCH}/DEBIAN/
+    cp -rfp debfiles/postrm ${DEBCREATEPATH}/${ARCH}/DEBIAN/
     cp -rfp debfiles/preinst ${DEBCREATEPATH}/${ARCH}/DEBIAN/
     cp -rfp debfiles/prerm ${DEBCREATEPATH}/${ARCH}/DEBIAN/
     chmod 0775 ${DEBCREATEPATH}/${ARCH}/DEBIAN/*
