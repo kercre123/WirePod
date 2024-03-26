@@ -21,6 +21,7 @@ case "$1" in
     systemctl enable wire-pod
     systemctl start wire-pod
     echo "wire-pod is installed and started."
+    /usr/bin/wire-pod -justip
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

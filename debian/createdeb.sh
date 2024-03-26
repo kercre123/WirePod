@@ -2,6 +2,8 @@
 
 #set -e
 
+COMPILE_ARCHES=(amd64 armhf arm64)
+
 ORIGPATH="$(pwd)"
 
 AMD64T="$(pwd)/wire-pod-toolchain/x86_64-unknown-linux-gnu/bin/x86_64-unknown-linux-gnu-"
@@ -133,6 +135,8 @@ function prepareVOSKbuild_ARMARM64() {
         make -j 8 online2 lm rnnlm
         find ${KALDIROOT} -name "*.o" -exec rm {} \;
         touch ${KALDIROOT}/KALDIBUILT
+    else
+        echo "VOSK dependencies already built for $ARCH"
     fi
     cd $ORIGPATH
 }
@@ -202,6 +206,8 @@ function doVOSKbuild() {
         fi
         cd vosk-api/src
         KALDI_ROOT=$KALDIROOT make EXTRA_LDFLAGS="-static-libstdc++" -j8
+    else
+        echo "VOSK already built for $ARCH"
     fi
     cd "${ORIGPATH}/build/${ARCH}"
     mkdir -p "${BPREFIX}/lib"
@@ -227,6 +233,8 @@ function buildOPUS() {
         make install
         cd $ORIGPATH
         touch built/${ARCH}/ogg_built
+    else
+        echo "OGG already built for $ARCH"
     fi
 
     if [[ ! -f built/${ARCH}/opus_built ]]; then
@@ -240,6 +248,8 @@ function buildOPUS() {
         make install
         cd $ORIGPATH
         touch built/${ARCH}/opus_built
+    else
+        echo "OPUS already built for $ARCH"
     fi
 }
 
@@ -266,6 +276,7 @@ function buildWirePod() {
     cp -rf built/$ARCH/lib/libvosk.so $DC/usr/lib/
     cp -rf built/$ARCH/include/vosk_api.h $DC/usr/include/
     cp -rf debfiles/wire-pod.service $DC/lib/systemd/system/
+    cp -rf debfiles/config.ini $DC/etc/wire-pod/
 
     # BUILD WIREPOD
     expToolchain $ARCH
@@ -291,31 +302,34 @@ function finishDeb() {
     echo "final/wirepod_$ARCH-$PODVERSION.deb created successfully"
 }
 
-createDEBIAN armhf
-createDEBIAN arm64
-createDEBIAN amd64
+function prepareVOSKbuild() {
+    ARCH=$1
+    if [[ $ARCH == "armhf" ]] || [[ $ARCH == "arm64" ]]; then
+        prepareVOSKbuild_ARMARM64 $ARCH
+    elif [[ $ARCH == "amd64" ]]; then
+        prepareVOSKbuild_AMD64
+    else
+        echo "Error: unknown architecture: $ARCH"
+    fi
+}
 
-prepareVOSKbuild_AMD64
-prepareVOSKbuild_ARMARM64 armhf
-prepareVOSKbuild_ARMARM64 arm64
+# start actually doing things
 
-doVOSKbuild amd64
-doVOSKbuild armhf
-doVOSKbuild arm64
 
-buildOPUS amd64
-buildOPUS armhf
-buildOPUS arm64
+for arch in "${COMPILE_ARCHES[@]}"; do
+    echo "Creating DEBIAN folder for $arch"
+    createDEBIAN "$arch"
+    echo "Compiling VOSK dependencies for $arch (if needed)"
+    prepareVOSKbuild "$arch"
+    echo "Building VOSK for $arch (if needed)"
+    doVOSKbuild "$arch"
+    echo "Building OPUS for $arch (if needed)"
+    buildOPUS "$arch"
+    echo "Building wire-pod for $arch..."
+    buildWirePod "$arch"
+    echo "Finishing deb for $arch"
+    finishDeb "$arch"
+done
 
-echo "all dependencies complete"
-
-echo "building wire-pod (amd64)..."
-buildWirePod amd64
-echo "building wire-pod (armhf)..."
-buildWirePod armhf
-echo "building wire-pod (arm64)..."
-buildWirePod arm64
-
-finishDeb amd64
-finishDeb armhf
-finishDeb arm64
+echo
+echo "All debs are complete."
