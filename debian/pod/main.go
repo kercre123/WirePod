@@ -48,7 +48,8 @@ func main() {
 	}
 	if *justIP {
 		ipAddr := botsetup.GetOutboundIP().String()
-		fmt.Println("\033[1;32mConfiguration page: http://" + ipAddr + ":" + webPort + "\033[0m")
+		fmt.Println("\033[1;32mWirePod configuration page: \033[1;36mhttp://" + ipAddr + ":" + webPort + "\033[0m")
+		os.Exit(0)
 	}
 	os.Setenv("WEBSERVER_PORT", webPort)
 	if useVoskGrammer {

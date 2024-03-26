@@ -32,6 +32,7 @@ function createDEBIAN() {
     mkdir -p ${DEBCREATEPATH}/${ARCH}/DEBIAN
     cp -rfp debfiles/postinst ${DEBCREATEPATH}/${ARCH}/DEBIAN/
     cp -rfp debfiles/preinst ${DEBCREATEPATH}/${ARCH}/DEBIAN/
+    cp -rfp debfiles/prerm ${DEBCREATEPATH}/${ARCH}/DEBIAN/
     chmod 0775 ${DEBCREATEPATH}/${ARCH}/DEBIAN/*
     cd ${DEBCREATEPATH}/${ARCH}/DEBIAN
     echo "Package: wirepod" > control
