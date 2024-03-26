@@ -12,6 +12,8 @@ ARM64T="$(pwd)/wire-pod-toolchain/aarch64-linux-gnu/bin/aarch64-linux-gnu-"
 
 DEBCREATEPATH="$(pwd)/debcreate"
 
+sudo apt install -y libopus-dev libogg-dev build-essential pkg-config
+
 # figure out arguments
 if [[ $1 == "" ]]; then
     echo "You must provide a version. ex. 1.0.0"
