@@ -21,6 +21,10 @@ fi
 PODVERSION=$1
 echo "Building version: $PODVERSION"
 
+if [[ $PODVERSION == "main" ]]; then
+    PODVERSION="1.0.0"
+fi
+
 # gather compilers
 if [[ ! -d wire-pod-toolchain ]]; then
     git clone https://github.com/kercre123/wire-pod-toolchain --depth=1
