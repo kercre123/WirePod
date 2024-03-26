@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+#set -e
 
 # summary of how this script can be called:
 #        * <prerm> `remove'
@@ -16,6 +16,8 @@ set -e
 
 case "$1" in
     remove)
+    systemctl stop wire-pod
+    systemctl disable wire-pod
     rm -rf /etc/wire-pod/wire-pod
     ;;
 
