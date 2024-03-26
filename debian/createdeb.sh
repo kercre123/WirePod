@@ -37,7 +37,7 @@ function createDEBIAN() {
     chmod 0775 ${DEBCREATEPATH}/${ARCH}/DEBIAN/*
     cd ${DEBCREATEPATH}/${ARCH}/DEBIAN
     echo "Package: wirepod" > control
-    echo "Version: $PODVERSION" >> control
+    echo "Version: ${PODVERSION#v}" >> control
     echo "Maintainer: Kerigan Creighton <kerigancreighton@gmail.com>" >> control
     echo "Description: A replacement voice server for the Anki Vector robot." >> control
     echo "Homepage: https://github.com/kercre123/wire-pod" >> control

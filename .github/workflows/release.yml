@@ -15,7 +15,7 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  buildwinandmacos:
     env:
       GOFLAGS: -modcacherw
     runs-on: macos-14
@@ -53,3 +53,50 @@ jobs:
             WirePod-${{ github.ref_name }}.dmg
             WirePodInstaller-${{ github.ref_name }}.exe
             wire-pod-win-amd64.zip
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WirePod-${{ github.ref_name }}.dmg
+          path: WirePod-${{ github.ref_name }}.dmg
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: WirePod-${{ github.ref_name }}-windows
+          path: |
+            WirePodInstaller-${{ github.ref_name }}.exe
+            wire-pod-win-amd64.zip
+  builddebs:
+    env:
+      GOFLAGS: -modcacherw
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository and submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          cache: true
+      - name: Build .debs
+        run: cd debian && ./createdeb.sh ${{ github.ref_name }}
+      - name: Copy final .debs to working directory
+        run: cp debian/final/wirepod*.deb .
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            wirepod_amd64-${{ github.ref_name }}.deb
+            wirepod_arm64-${{ github.ref_name }}.deb
+            wirepod_armhf-${{ github.ref_name }}.deb
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wirepod-${{ github.ref_name }}-debian
+          path: |
+            wirepod_amd64-${{ github.ref_name }}.deb
+            wirepod_arm64-${{ github.ref_name }}.deb
+            wirepod_armhf-${{ github.ref_name }}.deb
