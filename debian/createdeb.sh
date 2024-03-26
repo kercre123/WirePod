@@ -208,14 +208,14 @@ function doVOSKbuild() {
         fi
         cd vosk-api/src
         KALDI_ROOT=$KALDIROOT make EXTRA_LDFLAGS="-static-libstdc++" -j8
+	cd "${ORIGPATH}/build/${ARCH}"
+        mkdir -p "${BPREFIX}/lib"
+        mkdir -p "${BPREFIX}/include"
+        cp vosk-api/src/libvosk.so "${BPREFIX}/lib/"
+        cp vosk-api/src/vosk_api.h "${BPREFIX}/include/"
     else
         echo "VOSK already built for $ARCH"
     fi
-    cd "${ORIGPATH}/build/${ARCH}"
-    mkdir -p "${BPREFIX}/lib"
-    mkdir -p "${BPREFIX}/include"
-    cp vosk-api/src/libvosk.so "${BPREFIX}/lib/"
-    cp vosk-api/src/vosk_api.h "${BPREFIX}/include/"
     cd $ORIGPATH
 }
 
@@ -320,10 +320,13 @@ function prepareVOSKbuild() {
 
 
 for arch in "${COMPILE_ARCHES[@]}"; do
+    cd $ORIGPATH
     echo "Creating DEBIAN folder for $arch"
     createDEBIAN "$arch"
-    echo "Compiling VOSK dependencies for $arch (if needed)"
-    prepareVOSKbuild "$arch"
+    if [[ ! -f ${ORIGPATH}/built/$arch/lib/libvosk.so ]]; then
+        echo "Compiling VOSK dependencies for $arch"
+        prepareVOSKbuild "$arch"
+    fi
     echo "Building VOSK for $arch (if needed)"
     doVOSKbuild "$arch"
     echo "Building OPUS for $arch (if needed)"

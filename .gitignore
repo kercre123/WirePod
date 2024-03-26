@@ -18,7 +18,6 @@
 /android/resources/pod-bot-install.sh
 /android/resources/weather-map.json
 /debian/build
-/debian/built
 /debian/debcreate
 /debian/wire-pod-toolchain
 /debian/final
