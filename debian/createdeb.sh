@@ -2,7 +2,8 @@
 
 #set -e
 
-COMPILE_ARCHES=(amd64 armhf)
+COMPILE_ARCHES=(amd64 armhf arm64)
+#COMPILE_ARCHES=(arm64)
 
 ORIGPATH="$(pwd)"
 
@@ -12,6 +13,8 @@ ARM64T="$(pwd)/wire-pod-toolchain/aarch64-linux-gnu/bin/aarch64-linux-gnu-"
 
 DEBCREATEPATH="$(pwd)/debcreate"
 
+sudo apt update -y
+sudo apt upgrade -y
 sudo apt install -y libopus-dev libogg-dev build-essential pkg-config
 
 # figure out arguments
