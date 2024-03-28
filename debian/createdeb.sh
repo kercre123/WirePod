@@ -9,7 +9,7 @@ ORIGPATH="$(pwd)"
 
 AMD64T="$(pwd)/wire-pod-toolchain/x86_64-unknown-linux-gnu/bin/x86_64-unknown-linux-gnu-"
 ARMT="$(pwd)/wire-pod-toolchain/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-"
-ARM64T="$(pwd)/wire-pod-toolchain/aarch64-linux-gnu/bin/aarch64-linux-gnu-"
+ARM64T="$(pwd)/wire-pod-toolchain/aarch64-unknown-linux-gnu/bin/aarch64-unknown-linux-gnu-"
 
 DEBCREATEPATH="$(pwd)/debcreate"
 
