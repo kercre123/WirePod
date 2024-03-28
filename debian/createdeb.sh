@@ -13,8 +13,8 @@ ARM64T="$(pwd)/wire-pod-toolchain/aarch64-unknown-linux-gnu/bin/aarch64-unknown-
 
 DEBCREATEPATH="$(pwd)/debcreate"
 
-sudo apt update -y
-sudo apt upgrade -y
+#sudo apt update -y
+#sudo apt upgrade -y
 sudo apt install -y libopus-dev libogg-dev build-essential pkg-config
 
 # figure out arguments
@@ -343,6 +343,7 @@ for arch in "${COMPILE_ARCHES[@]}"; do
     echo "Building OPUS for $arch (if needed)"
     buildOPUS "$arch"
     echo "Building wire-pod for $arch..."
+    go clean -cache
     buildWirePod "$arch"
     echo "Finishing deb for $arch"
     finishDeb "$arch"
