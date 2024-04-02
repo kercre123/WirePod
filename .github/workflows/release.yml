@@ -82,7 +82,10 @@ jobs:
       - name: Build .debs
         run: cd debian && ./createdeb.sh ${{ github.ref_name }}
       - name: Copy final .debs to working directory
-        run: cp debian/final/wirepod*.deb .
+        run: |
+          cp debian/final/wirepod*.deb .
+          cp wirepod_amd64-*.deb wirepod_amd64-main.deb
+          cp wirepod_armhf-*.deb wirepod_armhf-main.deb
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
