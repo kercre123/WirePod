@@ -1,0 +1,14 @@
+[Unit]
+Description=wire-pod, a voice server for the Anki Vector robot.
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5s
+WorkingDirectory=/etc/wire-pod
+ExecStart=/usr/bin/wire-pod
+
+[Install]
+WantedBy=multi-user.target

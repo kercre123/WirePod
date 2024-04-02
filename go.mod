@@ -9,11 +9,13 @@ require (
 	github.com/fforchino/vector-go-sdk v0.0.0-20231108155304-62168f3595d6
 	github.com/getlantern/systray v1.2.2
 	github.com/go-ole/go-ole v1.3.0
+	github.com/kercre123/wire-pod-on-vector/chipper v1.0.0
 	github.com/kercre123/wire-pod/chipper v1.2.0
 	github.com/ncruces/zenity v0.10.10
 	github.com/soheilhy/cmux v0.1.5
 	github.com/wlynxg/anet v0.0.1
 	golang.org/x/sys v0.15.0
+	gopkg.in/ini.v1 v1.67.0
 )
 
 require (
@@ -96,7 +98,6 @@ require (
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
 	gopkg.in/hraban/opus.v2 v2.0.0-20230925203106-0188a62cb302 // indirect
-	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/js/dom v0.0.0-20231030024858-cb489e859d05 // indirect
 )
