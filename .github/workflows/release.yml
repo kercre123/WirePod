@@ -78,7 +78,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.22.x'
-          cache: false
+          cache: true
       - name: Build .debs
         run: cd debian && ./createdeb.sh ${{ github.ref_name }}
       - name: Copy final .debs to working directory
@@ -90,7 +90,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
             wirepod_amd64-${{ github.ref_name }}.deb
-            wirepod_arm64-${{ github.ref_name }}.deb
             wirepod_armhf-${{ github.ref_name }}.deb
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -98,5 +97,4 @@ jobs:
           name: wirepod-${{ github.ref_name }}-debian
           path: |
             wirepod_amd64-${{ github.ref_name }}.deb
-            wirepod_arm64-${{ github.ref_name }}.deb
             wirepod_armhf-${{ github.ref_name }}.deb
