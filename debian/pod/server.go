@@ -12,7 +12,6 @@ import (
 	"github.com/digital-dream-labs/api/go/jdocspb"
 	"github.com/digital-dream-labs/api/go/tokenpb"
 	"github.com/digital-dream-labs/hugh/log"
-	"github.com/kercre123/wire-pod/chipper/pkg/initwirepod"
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
 	"github.com/kercre123/wire-pod/chipper/pkg/mdnshandler"
 	chipperserver "github.com/kercre123/wire-pod/chipper/pkg/servers/chipper"
@@ -90,7 +89,7 @@ func BeginWirepodSpecific(sttInitFunc func() error, sttHandlerFunc interface{}, 
 	voiceProcessor, err = wp.New(sttInitFunc, sttHandlerFunc, voiceProcessorName)
 	wpweb.SttInitFunc = sttInitFunc
 	go sdkWeb.BeginServer()
-	http.HandleFunc("/api-chipper/", initwirepod.ChipperHTTPApi)
+	http.HandleFunc("/api-chipper/", ChipperHTTPApi)
 	if err != nil {
 		return err
 	}

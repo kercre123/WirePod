@@ -6,7 +6,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kercre123/wire-pod/chipper/pkg/initwirepod"
 	"github.com/kercre123/wire-pod/chipper/pkg/vars"
 	botsetup "github.com/kercre123/wire-pod/chipper/pkg/wirepod/setup"
 	stt "github.com/kercre123/wire-pod/chipper/pkg/wirepod/stt/vosk"
@@ -68,5 +67,5 @@ func main() {
 	}
 	os.Setenv("STT_SERVICE", "vosk")
 	os.Chdir("/etc/wire-pod")
-	initwirepod.StartFromProgramInit(stt.Init, stt.STT, stt.Name)
+	StartFromProgramInit(stt.Init, stt.STT, stt.Name)
 }

@@ -2,7 +2,8 @@
 
 #set -e
 
-COMPILE_ARCHES=(amd64 armhf arm64)
+COMPILE_ARCHES=(amd64 armhf)
+# arm64 is broken :(
 #COMPILE_ARCHES=(arm64)
 
 ORIGPATH="$(pwd)"
@@ -10,6 +11,7 @@ ORIGPATH="$(pwd)"
 AMD64T="$(pwd)/wire-pod-toolchain/x86_64-unknown-linux-gnu/bin/x86_64-unknown-linux-gnu-"
 ARMT="$(pwd)/wire-pod-toolchain/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-"
 ARM64T="$(pwd)/wire-pod-toolchain/aarch64-unknown-linux-gnu/bin/aarch64-unknown-linux-gnu-"
+#ARM64T="$HOME/x-tools/aarch64-linux-gnu/bin/aarch64-linux-gnu-"
 
 DEBCREATEPATH="$(pwd)/debcreate"
 
@@ -303,7 +305,7 @@ function buildWirePod() {
     -tags nolibopusfile \
     -ldflags "-w -s" \
     -o $DC/usr/bin/wire-pod \
-    ./pod/main.go ./pod/server.go
+    ./pod/*.go
 }
 
 function finishDeb() {
@@ -332,18 +334,19 @@ function prepareVOSKbuild() {
 
 for arch in "${COMPILE_ARCHES[@]}"; do
     cd $ORIGPATH
-    echo "Creating DEBIAN folder for $arch"
+#    echo "Creating DEBIAN folder for $arch"
     createDEBIAN "$arch"
     if [[ ! -f ${ORIGPATH}/built/$arch/lib/libvosk.so ]]; then
         echo "Compiling VOSK dependencies for $arch"
         prepareVOSKbuild "$arch"
     fi
-    echo "Building VOSK for $arch (if needed)"
+#    echo "Building VOSK for $arch (if needed)"
     doVOSKbuild "$arch"
-    echo "Building OPUS for $arch (if needed)"
+#    echo "Building OPUS for $arch (if needed)"
     buildOPUS "$arch"
+    echo "Dependencies complete for $arch."
     echo "Building wire-pod for $arch..."
-    go clean -cache
+    #go clean -cache
     buildWirePod "$arch"
     echo "Finishing deb for $arch"
     finishDeb "$arch"
