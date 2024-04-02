@@ -364,8 +364,14 @@ github.com/karrick/godirwalk v1.8.0/go.mod h1:H5KPZjojv4lE+QYImBI8xVtrBRgYrIVsaR
 github.com/karrick/godirwalk v1.10.3/go.mod h1:RoGL9dQei4vP9ilrpETWE8CLOZ1kiN0LhBygSwrAsHA=
 github.com/kercre123/vosk-api/go v1.0.2 h1:NDJUNv2ddw128amiVZ2xE2gKfKHeBRRhboSh+yiH6Wg=
 github.com/kercre123/vosk-api/go v1.0.2/go.mod h1:oVZG/VFmg23uNDzjShcw7UhZHWYG2zXgBm5FqioE2Ao=
-github.com/kercre123/wire-pod-on-vector/chipper v1.0.0 h1:nBdRvDQ5yXA5FNGfCMc7ykB/a7Kc/bIIkCZxJsbMXTA=
-github.com/kercre123/wire-pod-on-vector/chipper v1.0.0/go.mod h1:Y3XQMEwe7N8skvgLDLAVD8Hzs7cNGEMwO4QVsGiDqJQ=
+github.com/kercre123/wire-pod/chipper v1.1.6 h1:DEKa/VkBoAUMXx59i9CHZEu82FG1KaLVszoL9L9UqK4=
+github.com/kercre123/wire-pod/chipper v1.1.6/go.mod h1:DgewIOOgK4RZIAvXXiHLdlovdgfkPR8Q658uz4/HLhk=
+github.com/kercre123/wire-pod/chipper v1.1.7 h1:R4I7yYcbq6tRj51gqDMSmaFdrSNX4aP/or7pAiqqJ8Y=
+github.com/kercre123/wire-pod/chipper v1.1.7/go.mod h1:3YnE0CMnHihoQLnaTSCXUWzWDIY7kM8N3/R86Nrkiyc=
+github.com/kercre123/wire-pod/chipper v1.1.8 h1:Pcz2pnOFgSQUw5UzgsATEKlxheDhND0/WIh8gGOSxJU=
+github.com/kercre123/wire-pod/chipper v1.1.8/go.mod h1:3YnE0CMnHihoQLnaTSCXUWzWDIY7kM8N3/R86Nrkiyc=
+github.com/kercre123/wire-pod/chipper v1.1.9 h1:nFvjhuLrNuHu1F4/YQnB5kYgTwUsCv5Q0QICK+u+VMg=
+github.com/kercre123/wire-pod/chipper v1.1.9/go.mod h1:3YnE0CMnHihoQLnaTSCXUWzWDIY7kM8N3/R86Nrkiyc=
 github.com/kercre123/wire-pod/chipper v1.2.0 h1:ytIpOJBEN8+YUwVNxrUSxNe82W6kM1kqmRAmEZUlEzg=
 github.com/kercre123/wire-pod/chipper v1.2.0/go.mod h1:3YnE0CMnHihoQLnaTSCXUWzWDIY7kM8N3/R86Nrkiyc=
 github.com/kercre123/zeroconf v1.0.1 h1:Mbd8mN6xnNWYIqBN38x3jJjiPP2RmK4orzbGZsa1EOY=
