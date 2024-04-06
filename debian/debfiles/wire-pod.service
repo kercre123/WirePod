@@ -2,6 +2,8 @@
 Description=wire-pod, a voice server for the Anki Vector robot.
 StartLimitIntervalSec=500
 StartLimitBurst=5
+Wants=network-online.target
+After=network.target network-online.target
 
 [Service]
 Type=simple
