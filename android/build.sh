@@ -7,8 +7,8 @@ if [[ ${GHACTIONS} == "" ]]; then
     export TCHAIN=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin
     export APKSIGNER=${ANDROID_HOME}/build-tools/34.0.0/apksigner
 elif [[ ${GHACTIONS} == "true" ]]; then
-    export ANDROID_HOME="$(pwd)/android-ndk-r23c"
-    export TCHAIN=${ANDROID_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin
+    export ANDROID_HOME="$(pwd)/android-ndk"
+    export TCHAIN=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin
     export APKSIGNER="$(pwd)/android-14/apksigner"
 fi
 
@@ -16,8 +16,12 @@ if [[ ! $1 ]]; then
 	echo "You must provide a verison (./build.sh 1.0.0)"
 	exit 1
 fi
-if [[ ! -f $CC ]]; then
-    echo "Couldn't find $CC"
+VERSION=${1#v}
+if [[ $1 == "main" ]]; then
+    VERSION=1.0.0
+fi
+if [[ ! -d $TCHAIN ]]; then
+    echo "Couldn't find $TCHAIN"
     echo "You must install the Android SDK and an ndk-bundle."
     exit 1
 fi
@@ -85,7 +89,7 @@ cp ../built-libs/armv7/lib/libvosk.so lib/armeabi-v7a/
 cp ../libWirePod-armv7.so lib/armeabi-v7a/libWirePod.so
 cp ../libWirePod-arm64.so lib/arm64-v8a/libWirePod.so
 zip -r WirePod.apk lib
-${ANDROID_HOME}/build-tools/34.0.0/apksigner sign --ks ../key/ks.jks --ks-pass pass:"$(cat ../key/passwd)" --out ../WirePod.apk WirePod.apk
+${APKSIGNER} sign --ks ../key/ks.jks --ks-pass pass:"$(cat ../key/passwd)" --out ../WirePod.apk WirePod.apk
 cd ..
 rm -rf tmp
 rm -f libWirePod-armv7.so

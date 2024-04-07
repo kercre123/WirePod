@@ -79,6 +79,13 @@ jobs:
         with:
           go-version: '1.22.x'
           cache: true
+      - name: Setup cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ github.workspace }}/android/android-14
+            ${{ github.workspace }}/android/android-ndk
+          key: android-ndk-stuff-${{ hashFiles('**/go.sum') }}
       - name: Build .debs
         run: cd debian && ./createdeb.sh ${{ github.ref_name }}
       - name: Copy final .debs to working directory
@@ -86,15 +93,19 @@ jobs:
           cp debian/final/wirepod*.deb .
           cp wirepod_amd64-*.deb wirepod_amd64-main.deb
           cp wirepod_armhf-*.deb wirepod_armhf-main.deb
-      # - name: Setup Android NDK
-      #   uses: nttld/setup-ndk@v1
-      #   with:
-      #     ndk-version: r25c
-      # - name: Setup Android keys
-      #   env:
-      #     ANDROID_KEY: ${{ secrets.ANDROID_KEY }}
-      #     ANDROID_PASSWD: ${{ secrets.ANDROID_PASSWD }}
-      #   run: cd android && ./ghactions_keytodir.sh "${ANDROID_KEY}" "${ANDROID_PASSWD}"
+      - name: Setup Android build environment
+        env:
+          ANDROID_KEY: ${{ secrets.ANDROID_KEY }}
+          ANDROID_PASSWD: ${{ secrets.ANDROID_PASSWD }}
+        run: cd android && ./ghactions_init.sh "${ANDROID_KEY}" "${ANDROID_PASSWD}"
+      - name: Build Android APK
+        env:
+          GHACTIONS: "true"
+        run: cd android && ./build.sh ${{ github.ref_name }}
+      - name: Copy final .apk to working directory
+        run: |
+          cp android/*.apk .
+          cp *.apk WirePod-main.apk
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
@@ -103,10 +114,17 @@ jobs:
           files: |
             wirepod_amd64-${{ github.ref_name }}.deb
             wirepod_armhf-${{ github.ref_name }}.deb
-      - name: Upload artifacts
+            WirePod-${{ github.ref_name }}.apk
+      - name: Upload Debian artifacts
         uses: actions/upload-artifact@v4
         with:
           name: wirepod-${{ github.ref_name }}-debian
           path: |
             wirepod_amd64-${{ github.ref_name }}.deb
             wirepod_armhf-${{ github.ref_name }}.deb
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wirepod-${{ github.ref_name }}-android
+          path: |
+            WirePod-${{ github.ref_name }}.apk
