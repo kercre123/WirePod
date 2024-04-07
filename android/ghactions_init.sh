@@ -1,7 +1,7 @@
 #!/bin/bash
 
-echo $ANDROID_KEY | base64 -d > key/ks.jks
-echo $ANDROID_PASSWD > key/passwd
+echo "$ANDROID_KEY" | base64 -d > key/ks.jks
+echo "$ANDROID_PASSWD" > key/passwd
 
 if [[ ! -d android-ndk ]]; then
     echo "Getting ndk..."
