@@ -50,7 +50,7 @@ cp -r ../../wire-pod/chipper/intent-data .
 cp -r ../../wire-pod/chipper/epod .
 cp -r ../../wire-pod/vector-cloud/pod-bot-install.sh .
 cp -r ../../wire-pod/chipper/weather-map.json .
-echo $VERSION > version
+echo $1 > version
 zip -r static.zip .
 cd ..
 rm -f static.go
@@ -62,7 +62,7 @@ export CGO_LDFLAGS="-L$(pwd)/built-libs/arm64/lib"
 export CGO_CFLAGS="-I$(pwd)/built-libs/arm64/include"
 echo "Building vessel APK..."
 cd vessel
-GOOS=android GOARCH=arm64 $HOME/go/bin/fyne package -os android/arm64 -appID com.kercre123.wirepod -icon ../icons/png/podfull.png --name WirePod --tags nolibopusfile --appVersion $VERSION
+GOOS=android GOARCH=arm64 $HOME/go/bin/fyne package -os android/arm64 -appID com.kercre123.wirepod -icon ../icons/png/podfull.png --name WirePod --tags nolibopusfile --appVersion $1
 cp WirePod.apk ../
 cd ..
 echo "Building WirePod for android/arm64..."
@@ -98,5 +98,5 @@ rm -f WirePod.apk.idsig
 rm -f vessel/WirePod.apk
 rm -f resources/static.zip
 rm -f static.go
-mv WirePod.apk WirePod-$VERSION.apk
-echo "Build complete ./WirePod-$VERSION.apk"
+mv WirePod.apk WirePod-$1.apk
+echo "Build complete ./WirePod-$1.apk"
