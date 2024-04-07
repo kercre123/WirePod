@@ -114,6 +114,7 @@ jobs:
         run: |
           cp android/*.apk .
           cp *.apk WirePod-main.apk
+          cp WirePod-main.apk WirePod-${{ github.ref_name }}.apk
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
