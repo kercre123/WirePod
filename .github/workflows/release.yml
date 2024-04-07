@@ -104,7 +104,7 @@ jobs:
         env:
           ANDROID_KEY: ${{ secrets.ANDROID_KEY }}
           ANDROID_PASSWD: ${{ secrets.ANDROID_PASSWD }}
-        run: cd android && ./ghactions_init.sh $ANDROID_KEY $ANDROID_PASSWD
+        run: cd android && ./ghactions_init.sh
       - name: Build Android APK
         env:
           GHACTIONS: "true"
