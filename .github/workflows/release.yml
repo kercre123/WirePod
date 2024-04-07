@@ -102,8 +102,8 @@ jobs:
             wirepod_armhf-${{ github.ref_name }}.deb
       - name: Setup Android build environment
         env:
-          ANDROID_KEY: '${{ secrets.ANDROID_KEY }}'
-          ANDROID_PASSWD: '${{ secrets.ANDROID_PASSWD }}'
+          ANDROID_KEY: "${{ secrets.ANDROID_KEY }}"
+          ANDROID_PASSWD: "${{ secrets.ANDROID_PASSWD }}"
         run: |
           echo "$ANDROID_KEY"
           echo "$ANDROID_PASSWD"
