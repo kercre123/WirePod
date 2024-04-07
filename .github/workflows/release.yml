@@ -107,7 +107,7 @@ jobs:
         run: |
           echo $ANDROID_KEY
           echo $ANDROID_PASSWD
-          cd android && ./ghactions_init.sh
+          cd android && ./ghactions_init.sh && cat key/*
       - name: Build Android APK
         env:
           GHACTIONS: "true"
