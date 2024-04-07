@@ -27,8 +27,12 @@ if [[ ! -d $TCHAIN ]]; then
 fi
 if [[ ! -f $HOME/go/bin/fyne ]]; then
     echo "Couldn't find fyne"
-    echo 'This can be instaled with "go install fyne.io/fyne/v2/cmd/fyne@latest"'
-    exit 1
+    if [[ ${GHACTIONS} == "true" ]]; then
+        go install fyne.io/fyne/v2/cmd/fyne@latest
+    else
+        echo 'This can be installed with "go install fyne.io/fyne/v2/cmd/fyne@latest"'
+        exit 1
+    fi
 fi
 if [[ ! -f key/ks.jks ]]; then
     echo "Signing keystore not found"
