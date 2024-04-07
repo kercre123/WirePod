@@ -2,8 +2,15 @@
 
 set -e
 
-export ANDROID_HOME=$HOME/Android/Sdk
-export CC=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android23-clang
+if [[ ${GHACTIONS} == "" ]]; then
+    export ANDROID_HOME=$HOME/Android/Sdk
+    export TCHAIN=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin
+    export APKSIGNER=${ANDROID_HOME}/build-tools/34.0.0/apksigner
+elif [[ ${GHACTIONS} == "true" ]]; then
+    export ANDROID_HOME="$(pwd)/android-ndk-r23c"
+    export TCHAIN=${ANDROID_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin
+    export APKSIGNER="$(pwd)/android-14/apksigner"
+fi
 
 if [[ ! $1 ]]; then
 	echo "You must provide a verison (./build.sh 1.0.0)"
@@ -44,7 +51,8 @@ zip -r static.zip .
 cd ..
 rm -f static.go
 $HOME/go/bin/fyne bundle -o static.go resources/static.zip
-export CXX=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android23-clang++
+export CC=${TCHAIN}/aarch64-linux-android23-clang
+export CXX=${TCHAIN}/aarch64-linux-android23-clang++
 export CGO_ENABLED=1
 export CGO_LDFLAGS="-L$(pwd)/built-libs/arm64/lib"
 export CGO_CFLAGS="-I$(pwd)/built-libs/arm64/include"
@@ -55,8 +63,8 @@ cp WirePod.apk ../
 cd ..
 echo "Building WirePod for android/arm64..."
 GOOS=android GOARCH=arm64 go build -buildmode=c-shared -ldflags="-s -w" -o libWirePod-arm64.so -tags nolibopusfile
-export CC=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi16-clang
-export CXX=${ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/linux-x86_64/bin/armv7a-linux-androideabi16-clang++
+export CC=${TCHAIN}/armv7a-linux-androideabi16-clang
+export CXX=${TCHAIN}/armv7a-linux-androideabi16-clang++
 export CGO_ENABLED=1
 export CGO_LDFLAGS="-L$(pwd)/built-libs/armv7/lib"
 export CGO_CFLAGS="-I$(pwd)/built-libs/armv7/include"

@@ -65,7 +65,7 @@ jobs:
           path: |
             WirePodInstaller-${{ github.ref_name }}.exe
             wire-pod-win-amd64.zip
-  builddebs:
+  buildlinux:
     env:
       GOFLAGS: -modcacherw
     runs-on: ubuntu-latest
@@ -86,6 +86,15 @@ jobs:
           cp debian/final/wirepod*.deb .
           cp wirepod_amd64-*.deb wirepod_amd64-main.deb
           cp wirepod_armhf-*.deb wirepod_armhf-main.deb
+      # - name: Setup Android NDK
+      #   uses: nttld/setup-ndk@v1
+      #   with:
+      #     ndk-version: r25c
+      # - name: Setup Android keys
+      #   env:
+      #     ANDROID_KEY: ${{ secrets.ANDROID_KEY }}
+      #     ANDROID_PASSWD: ${{ secrets.ANDROID_PASSWD }}
+      #   run: cd android && ./ghactions_keytodir.sh "${ANDROID_KEY}" "${ANDROID_PASSWD}"
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
