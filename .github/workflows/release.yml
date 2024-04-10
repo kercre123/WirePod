@@ -93,6 +93,7 @@ jobs:
           cp debian/final/wirepod*.deb .
           cp wirepod_amd64-*.deb wirepod_amd64-main.deb
           cp wirepod_armhf-*.deb wirepod_armhf-main.deb
+          cp wirepod_arm64-*.deb wirepod_arm64-main.deb
       - name: Upload Debian artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -100,6 +101,7 @@ jobs:
           path: |
             wirepod_amd64-${{ github.ref_name }}.deb
             wirepod_armhf-${{ github.ref_name }}.deb
+            wirepod_arm64-${{ github.ref_name }}.deb
       - name: Setup Android build environment
         env:
           ANDROID_KEY: "${{ secrets.ANDROID_KEY }}"
@@ -114,7 +116,7 @@ jobs:
         run: |
           cp android/*.apk .
           cp *.apk WirePod-main.apk
-          cp WirePod-main.apk WirePod-${{ github.ref_name }}.apk
+          cp -f WirePod-main.apk WirePod-${{ github.ref_name }}.apk
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
@@ -129,4 +131,5 @@ jobs:
           files: |
             wirepod_amd64-${{ github.ref_name }}.deb
             wirepod_armhf-${{ github.ref_name }}.deb
+            wirepod_arm64-${{ github.ref_name }}.deb
             WirePod-${{ github.ref_name }}.apk

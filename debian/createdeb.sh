@@ -2,8 +2,7 @@
 
 #set -e
 
-COMPILE_ARCHES=(amd64 armhf)
-# arm64 is broken :(
+COMPILE_ARCHES=(amd64 armhf arm64)
 #COMPILE_ARCHES=(arm64)
 
 ORIGPATH="$(pwd)"
@@ -17,7 +16,7 @@ DEBCREATEPATH="$(pwd)/debcreate"
 
 #sudo apt update -y
 #sudo apt upgrade -y
-sudo apt install -y libopus-dev libogg-dev build-essential pkg-config
+sudo apt install -y libopus-dev libogg-dev build-essential pkg-config gcc-aarch64-linux-gnu
 
 # figure out arguments
 if [[ $1 == "" ]]; then
@@ -300,7 +299,17 @@ function buildWirePod() {
     export CGO_ENABLED=1 
     export CGO_LDFLAGS="-L$(pwd)/built/$ARCH/lib -latomic" 
     export CGO_CFLAGS="-I$(pwd)/built/$ARCH/include"
-
+    if [[ "$ARCH" == "arm64" ]]; then
+	echo "unexporting"
+	export CC="aarch64-linux-gnu-gcc"
+	export LD="aarch64-linux-gnu-ld"
+	export CXX="aarch64-linux-gnu-g++"
+    export AR=""
+    export FORTRAN=""
+    export RANLIB=""
+    export AS=""
+    export CPP=""
+    fi
     go build \
     -tags nolibopusfile \
     -ldflags "-w -s" \
