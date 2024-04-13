@@ -118,7 +118,7 @@ jobs:
           cp *.apk WirePod-main.apk
       - name: Rename APK so it includes version string
         if: ${{ github.ref_name != 'main' }}
-	run: cp -f WirePod-main.apk WirePod-${{ github.ref_name }}.apk
+        run: cp -f WirePod-main.apk WirePod-${{ github.ref_name }}.apk
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
         with:
