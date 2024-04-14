@@ -9,7 +9,8 @@ ORIGPATH="$(pwd)"
 
 AMD64T="$(pwd)/wire-pod-toolchain/x86_64-unknown-linux-gnu/bin/x86_64-unknown-linux-gnu-"
 ARMT="$(pwd)/wire-pod-toolchain/arm-unknown-linux-gnueabihf/bin/arm-unknown-linux-gnueabihf-"
-ARM64T="$(pwd)/wire-pod-toolchain/aarch64-unknown-linux-gnu/bin/aarch64-unknown-linux-gnu-"
+#ARM64T="$(pwd)/wire-pod-toolchain/aarch64-unknown-linux-gnu/bin/aarch64-unknown-linux-gnu-"
+ARM64T="$(pwd)/wire-pod-toolchain/gcc-arm-8.3-2019.03-x86_64-aarch64-linux-gnu/bin/aarch64-linux-gnu-"
 #ARM64T="$HOME/x-tools/aarch64-linux-gnu/bin/aarch64-linux-gnu-"
 
 DEBCREATEPATH="$(pwd)/debcreate"
@@ -299,17 +300,17 @@ function buildWirePod() {
     export CGO_ENABLED=1 
     export CGO_LDFLAGS="-L$(pwd)/built/$ARCH/lib -latomic" 
     export CGO_CFLAGS="-I$(pwd)/built/$ARCH/include"
-    if [[ "$ARCH" == "arm64" ]]; then
-	echo "unexporting"
-	export CC="aarch64-linux-gnu-gcc"
-	export LD="aarch64-linux-gnu-ld"
-	export CXX="aarch64-linux-gnu-g++"
-    export AR=""
-    export FORTRAN=""
-    export RANLIB=""
-    export AS=""
-    export CPP=""
-    fi
+#    if [[ "$ARCH" == "arm64" ]]; then
+#	echo "unexporting"
+#	export CC="aarch64-linux-gnu-gcc"
+#	export LD="aarch64-linux-gnu-ld"
+#	export CXX="aarch64-linux-gnu-g++"
+#    export AR=""
+#    export FORTRAN=""
+#    export RANLIB=""
+#    export AS=""
+#    export CPP=""
+#    fi
     go build \
     -tags nolibopusfile \
     -ldflags "-w -s" \
