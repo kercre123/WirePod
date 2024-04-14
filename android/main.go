@@ -3,8 +3,10 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -95,6 +97,7 @@ func PodWindow(myApp fyne.App) {
 		}
 		secondCard.SetSubTitle("Running!")
 		go func() {
+			http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 			go mdnshandler.PostmDNS()
 			go func() {
 				PingJdocsInit()
