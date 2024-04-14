@@ -53,7 +53,7 @@ function createDEBIAN() {
     echo "Description: A replacement voice server for the Anki Vector robot." >> control
     echo "Homepage: https://github.com/kercre123/wire-pod" >> control
     echo "Architecture: $ARCH" >> control
-    echo "Depends: libopus-dev, libogg-dev, avahi-daemon, libatomic1" >> control
+    echo "Depends: libopus0, libogg0, avahi-daemon, libatomic1" >> control
     cd $ORIGPATH
 }
 

@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/kercre123/wire-pod/chipper/pkg/vars"
@@ -12,12 +14,43 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+func CheckIfPi() bool {
+	model, err := os.ReadFile("/proc/device-tree/model")
+	if err != nil {
+		fmt.Println("Error getting device model (/proc/device-tree/model)")
+		return false
+	}
+	if strings.Contains(string(model), "Raspberry Pi") {
+		return true
+	}
+	return false
+}
+
+func PerformanceGov() {
+	for i := 0; i < runtime.NumCPU(); i++ {
+		fmt.Println("Setting CPU " + fmt.Sprint(i) + " to performance")
+		exec.Command("/bin/bash", "-c", "echo performance > /sys/devices/system/cpu/cpu"+fmt.Sprint(i)+"/cpufreq/scaling_governor").Run()
+	}
+}
+
+func DoPerfMode(perfMode string) {
+	switch mode := perfMode; mode {
+	case "true":
+		PerformanceGov()
+	case "onlyifpi":
+		if CheckIfPi() {
+			PerformanceGov()
+		}
+	}
+}
+
 func main() {
 	vars.IsPackagedLinux = true
 	verb := flag.Bool("verbose", true, "with/without debug logging")
 	justIP := flag.Bool("justip", false, "show just configuration page")
 	flag.Parse()
 	var webPort string
+	var perfMode string
 	var useVoskGrammer bool
 	f, err := ini.Load("/etc/wire-pod/config.ini")
 	if err != nil {
@@ -35,6 +68,15 @@ func main() {
 				webPort = "8080"
 			} else {
 				webPort = strings.TrimSpace(k.String())
+			}
+			k, err = sec.GetKey("perf_mode")
+			if err != nil {
+				perfMode = "onlyifpi"
+			} else {
+				perfMode = strings.TrimSpace(k.String())
+				if perfMode == "" {
+					perfMode = "onlyifpi"
+				}
 			}
 			k, err = sec.GetKey("vosk_with_grammer")
 			if err != nil {
@@ -67,5 +109,6 @@ func main() {
 	}
 	os.Setenv("STT_SERVICE", "vosk")
 	os.Chdir("/etc/wire-pod")
+	DoPerfMode(perfMode)
 	StartFromProgramInit(stt.Init, stt.STT, stt.Name)
 }
