@@ -308,6 +308,7 @@ function buildWirePod() {
     cp -rf $WPC/webroot $DC/etc/wire-pod/
     cp -rf $WPC/weather-map.json $DC/etc/wire-pod/
     cp -rf wire-pod/vector-cloud/pod-bot-install.sh $DC/etc/wire-pod/
+    echo $PODVERSION > $DC/etc/wire-pod/version
     cp -rf built/$ARCH/lib/libvosk.so $DC/usr/lib/
     cp -rf built/$ARCH/include/vosk_api.h $DC/usr/include/
     cp -rf debfiles/wire-pod.service $DC/lib/systemd/system/

@@ -133,6 +133,7 @@ function buildApp() {
     cp -r ${CHPATH}/intent-data ${CHIPPER}
     cp -r ${CHPATH}/webroot ${CHIPPER}
     cp -r ${CHPATH}/epod ${CHIPPER}
+    echo "${PODVER}" > ${CHIPPER}/version
     cp ${CLPATH}/build/vic-cloud ${VECTOR_CLOUD}/build/
     cp ${CLPATH}/pod-bot-install.sh ${VECTOR_CLOUD}
 

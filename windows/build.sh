@@ -92,6 +92,7 @@ cp ${CHPATH}/weather-map.json tmp/wire-pod/chipper/
 cp -r ${CHPATH}/webroot tmp/wire-pod/chipper/
 cp -r ${CHPATH}/epod tmp/wire-pod/chipper/
 cp ${CHPATH}/stttest.pcm tmp/wire-pod/chipper/
+echo $1 > tmp/wire-pod/chipper/version
 cp ${CLPATH}/build/vic-cloud tmp/wire-pod/vector-cloud/build/
 cp ${CLPATH}/pod-bot-install.sh tmp/wire-pod/vector-cloud/
 cp -r ../icons tmp/wire-pod/chipper/icons
