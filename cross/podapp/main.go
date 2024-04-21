@@ -13,7 +13,6 @@ import (
 	all "github.com/kercre123/WirePod/cross/all"
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
 	"github.com/kercre123/wire-pod/chipper/pkg/vars"
-	botsetup "github.com/kercre123/wire-pod/chipper/pkg/wirepod/setup"
 	stt "github.com/kercre123/wire-pod/chipper/pkg/wirepod/stt/vosk"
 	"github.com/ncruces/zenity"
 )
@@ -34,7 +33,7 @@ func mBoxIcon() string {
 }
 
 func getNeedsSetupMsg() string {
-	return `WirePod is now running in the background. You must set it up by heading to http://` + botsetup.GetOutboundIP().String() + `:` + vars.WebPort + ` in a browser.`
+	return `WirePod is now running in the background. You must set it up by heading to http://` + vars.GetOutboundIP().String() + `:` + vars.WebPort + ` in a browser.`
 }
 
 func checkIfRestartNeeded() bool {
@@ -186,7 +185,7 @@ func onReady() {
 				)
 				ExitProgram(0)
 			case <-mBrowse.ClickedCh:
-				go openBrowser("http://" + botsetup.GetOutboundIP().String() + ":" + vars.WebPort)
+				go openBrowser("http://" + vars.GetOutboundIP().String() + ":" + vars.WebPort)
 			case <-mConfig.ClickedCh:
 				conf, _ := os.UserConfigDir()
 				go openFileExplorer(filepath.Join(conf, vars.PodName))

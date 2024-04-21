@@ -22,7 +22,6 @@ import (
 	wpweb "github.com/kercre123/wire-pod/chipper/pkg/wirepod/config-ws"
 	wp "github.com/kercre123/wire-pod/chipper/pkg/wirepod/preqs"
 	sdkWeb "github.com/kercre123/wire-pod/chipper/pkg/wirepod/sdkapp"
-	botsetup "github.com/kercre123/wire-pod/chipper/pkg/wirepod/setup"
 	"github.com/ncruces/zenity"
 	"github.com/soheilhy/cmux"
 
@@ -50,7 +49,7 @@ func NeedsSetupMsg() {
 		)
 		if err != nil {
 			if err == zenity.ErrExtraButton {
-				openBrowser("http://" + botsetup.GetOutboundIP().String() + ":" + vars.WebPort)
+				openBrowser("http://" + vars.GetOutboundIP().String() + ":" + vars.WebPort)
 			}
 		}
 	}()
@@ -130,16 +129,16 @@ func StartFromProgramInit(sttInitFunc func() error, sttHandlerFunc interface{}, 
 		vars.APIConfig.PastInitialSetup = false
 		vars.WriteConfigToDisk()
 		NeedsSetupMsg()
-		systray.SetTooltip("wire-pod must be set up at http://" + botsetup.GetOutboundIP().String() + ":" + vars.WebPort)
+		systray.SetTooltip("wire-pod must be set up at http://" + vars.GetOutboundIP().String() + ":" + vars.WebPort)
 	} else if !vars.APIConfig.PastInitialSetup {
 		logger.Println("Wire-pod is not setup. Use the webserver at port " + vars.WebPort + " to set up wire-pod.")
 		NeedsSetupMsg()
-		systray.SetTooltip("wire-pod must be set up at http://" + botsetup.GetOutboundIP().String() + ":" + vars.WebPort)
+		systray.SetTooltip("wire-pod must be set up at http://" + vars.GetOutboundIP().String() + ":" + vars.WebPort)
 	} else if vars.APIConfig.STT.Service == "vosk" && vars.APIConfig.STT.Language == "" {
 		logger.Println("\033[33m\033[1mLanguage value is blank, but STT service is Vosk. Reinitiating setup process.\033[0m")
 		logger.Println("Wire-pod is not setup. Use the webserver at port " + vars.WebPort + " to set up wire-pod.")
 		NeedsSetupMsg()
-		systray.SetTooltip("wire-pod must be set up at http://" + botsetup.GetOutboundIP().String() + ":" + vars.WebPort)
+		systray.SetTooltip("wire-pod must be set up at http://" + vars.GetOutboundIP().String() + ":" + vars.WebPort)
 		vars.APIConfig.PastInitialSetup = false
 	} else {
 		go StartChipper(true)
@@ -236,7 +235,7 @@ func StartChipper(fromInit bool) {
 		go httpServe(httpListenerTwo)
 	}
 
-	systray.SetTooltip("wire-pod is running.\n" + "http://" + botsetup.GetOutboundIP().String() + ":" + vars.WebPort)
+	systray.SetTooltip("wire-pod is running.\n" + "http://" + vars.GetOutboundIP().String() + ":" + vars.WebPort)
 	var discrete bool
 	if len(os.Args) > 1 {
 		if strings.Contains(os.Args[1], "-d") {

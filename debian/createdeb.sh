@@ -54,10 +54,29 @@ function createDEBIAN() {
     echo "Description: A replacement voice server for the Anki Vector robot." >> control
     echo "Homepage: https://github.com/kercre123/wire-pod" >> control
     echo "Architecture: $ARCH" >> control
-    echo "Depends: libopus0, libogg0, avahi-daemon, libatomic1" >> control
+    echo "Depends: libopus0, libogg0, avahi-daemon, libatomic1, libsodium23" >> control
     cd $ORIGPATH
 }
 
+function doLibSodium() {
+    ARCH=$1
+    cd $ORIGPATH
+    if [[ ! -f built/${ARCH}/sodium_built ]]; then
+    mkdir -p build/${ARCH}
+    mkdir -p built/${ARCH}
+    BUILTDIR="$(pwd)/built/${ARCH}"
+    cd build/${ARCH}
+    git clone https://github.com/jedisct1/libsodium.git
+    cd libsodium
+    git checkout 1.0.18
+    expToolchain $ARCH
+    ./autogen.sh -s
+    ./configure --host=$PODHOST --prefix="$BUILTDIR"
+    make -j6
+    make install
+    touch ${BUILTDIR}/sodium_built
+    fi
+}
 
 function prepareVOSKbuild_AMD64() {
     cd $ORIGPATH
@@ -274,7 +293,8 @@ function buildWirePod() {
 
     # get the webroot, intent data, certs
     if [[ ! -d wire-pod ]]; then
-        git clone https://github.com/kercre123/wire-pod --depth=1
+        git clone https://github.com/kercre123/wire-pod --branch=inbuilt-ble
+        cd ..
     fi
     DC=debcreate/${ARCH}
     WPC=wire-pod/chipper
@@ -346,6 +366,7 @@ for arch in "${COMPILE_ARCHES[@]}"; do
     cd $ORIGPATH
 #    echo "Creating DEBIAN folder for $arch"
     createDEBIAN "$arch"
+    doLibSodium "$arch"
     if [[ ! -f ${ORIGPATH}/built/$arch/lib/libvosk.so ]]; then
         echo "Compiling VOSK dependencies for $arch"
         prepareVOSKbuild "$arch"

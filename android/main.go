@@ -22,7 +22,6 @@ import (
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
 	"github.com/kercre123/wire-pod/chipper/pkg/mdnshandler"
 	"github.com/kercre123/wire-pod/chipper/pkg/vars"
-	botsetup "github.com/kercre123/wire-pod/chipper/pkg/wirepod/setup"
 	wirepod_vosk "github.com/kercre123/wire-pod/chipper/pkg/wirepod/stt/vosk"
 	"github.com/wlynxg/anet"
 )
@@ -103,10 +102,10 @@ func PodWindow(myApp fyne.App) {
 				PingJdocsInit()
 				PingJdocsStart()
 			}()
-			hyprLink.SetText("http://" + botsetup.GetOutboundIP().String() + ":8080")
+			hyprLink.SetText("http://" + vars.GetOutboundIP().String() + ":8080")
 			hyprLink.SetURL(&url.URL{
 				Scheme: "http",
-				Host:   botsetup.GetOutboundIP().String() + ":8080",
+				Host:   vars.GetOutboundIP().String() + ":8080",
 			})
 			hyprLink.Show()
 			linkLabel.Show()

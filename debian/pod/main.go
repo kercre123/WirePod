@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/kercre123/wire-pod/chipper/pkg/vars"
-	botsetup "github.com/kercre123/wire-pod/chipper/pkg/wirepod/setup"
 	stt "github.com/kercre123/wire-pod/chipper/pkg/wirepod/stt/vosk"
 	"gopkg.in/ini.v1"
 )
@@ -89,7 +88,7 @@ func main() {
 		}
 	}
 	if *justIP {
-		ipAddr := botsetup.GetOutboundIP().String()
+		ipAddr := vars.GetOutboundIP().String()
 		fmt.Println("\033[1;32mWirePod configuration page: \033[1;36mhttp://" + ipAddr + ":" + webPort + "\033[0m")
 		os.Exit(0)
 	}
