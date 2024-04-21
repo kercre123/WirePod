@@ -294,7 +294,6 @@ function buildWirePod() {
     # get the webroot, intent data, certs
     if [[ ! -d wire-pod ]]; then
         git clone https://github.com/kercre123/wire-pod --branch=inbuilt-ble
-        cd ..
     fi
     DC=debcreate/${ARCH}
     WPC=wire-pod/chipper
