@@ -41,7 +41,7 @@ jobs:
       - name: Copy macOS installer to default working directory
         run: cp macos/target/WirePod-${{ github.ref_name }}.dmg .
       - name: Build for Windows
-        run: cd windows && sudo ./build-installer.sh ${{ github.ref_name }} && sudo ./build.sh
+        run: cd windows && sudo ./build-installer.sh ${{ github.ref_name }} && sudo ./build.sh ${{ github.ref_name }}
       - name: Copy Windows installer to default working directory
         run: cp windows/wire-pod-win-amd64.zip . && cp windows/WirePodInstaller-${{ github.ref_name }}.exe .
       - name: Release
