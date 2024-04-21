@@ -62,19 +62,19 @@ function doLibSodium() {
     ARCH=$1
     cd $ORIGPATH
     if [[ ! -f built/${ARCH}/sodium_built ]]; then
-    mkdir -p build/${ARCH}
-    mkdir -p built/${ARCH}
-    BUILTDIR="$(pwd)/built/${ARCH}"
-    cd build/${ARCH}
-    git clone https://github.com/jedisct1/libsodium.git
-    cd libsodium
-    git checkout 1.0.18
-    expToolchain $ARCH
-    ./autogen.sh -s
-    ./configure --host=$PODHOST --prefix="$BUILTDIR"
-    make -j6
-    make install
-    touch ${BUILTDIR}/sodium_built
+        mkdir -p build/${ARCH}
+        mkdir -p built/${ARCH}
+        BUILTDIR="$(pwd)/built/${ARCH}"
+        cd build/${ARCH}
+        git clone https://github.com/jedisct1/libsodium.git
+        cd libsodium
+        git checkout 1.0.18
+        expToolchain $ARCH
+        ./autogen.sh -s
+        ./configure --host=$PODHOST --prefix="$BUILTDIR"
+        make -j6
+        make install
+        touch ${BUILTDIR}/sodium_built
     fi
 }
 
@@ -96,24 +96,24 @@ function prepareVOSKbuild_AMD64() {
     export CPP=${AMD64T}cpp
     export PODHOST=x86_64-unknown-linux-gnu
     if [[ ! -f ${KALDIROOT}/KALDIBUILT ]]; then
-        git clone -b vosk --single-branch https://github.com/alphacep/kaldi 
-        cd kaldi/tools 
-        git clone -b v0.3.20 --single-branch https://github.com/xianyi/OpenBLAS 
-        git clone -b v3.2.1  --single-branch https://github.com/alphacep/clapack 
-        make -C OpenBLAS ONLY_CBLAS=1 DYNAMIC_ARCH=1 TARGET=NEHALEM USE_LOCKING=1 USE_THREAD=0 all 
-        make -C OpenBLAS PREFIX=$(pwd)/OpenBLAS/install install 
-        mkdir -p clapack/BUILD && cd clapack/BUILD && cmake .. && make -j 8 && find . -name "*.a" | xargs cp -t ../../OpenBLAS/install/lib 
+        git clone -b vosk --single-branch https://github.com/alphacep/kaldi
+        cd kaldi/tools
+        git clone -b v0.3.20 --single-branch https://github.com/xianyi/OpenBLAS
+        git clone -b v3.2.1  --single-branch https://github.com/alphacep/clapack
+        make -C OpenBLAS ONLY_CBLAS=1 DYNAMIC_ARCH=1 TARGET=NEHALEM USE_LOCKING=1 USE_THREAD=0 all
+        make -C OpenBLAS PREFIX=$(pwd)/OpenBLAS/install install
+        mkdir -p clapack/BUILD && cd clapack/BUILD && cmake .. && make -j 8 && find . -name "*.a" | xargs cp -t ../../OpenBLAS/install/lib
         cd ${KALDIROOT}/tools
-        git clone --single-branch https://github.com/alphacep/openfst openfst 
-        cd openfst 
-        autoreconf -i 
-        CFLAGS="-g -O3" ./configure --prefix=${KALDIROOT}/tools/openfst --host=$PODHOST --enable-static --enable-shared --enable-far --enable-ngram-fsts --enable-lookahead-fsts --with-pic --disable-bin 
-        make -j 8 && make install 
-        cd ${KALDIROOT}/src 
+        git clone --single-branch https://github.com/alphacep/openfst openfst
+        cd openfst
+        autoreconf -i
+        CFLAGS="-g -O3" ./configure --prefix=${KALDIROOT}/tools/openfst --host=$PODHOST --enable-static --enable-shared --enable-far --enable-ngram-fsts --enable-lookahead-fsts --with-pic --disable-bin
+        make -j 8 && make install
+        cd ${KALDIROOT}/src
         ./configure --mathlib=OPENBLAS_CLAPACK --shared --use-cuda=no --host=$PODHOST
-        sed -i 's:-msse -msse2:-msse -msse2:g' kaldi.mk 
-        sed -i 's: -O1 : -O3 :g' kaldi.mk 
-        make -j 8 online2 lm rnnlm 
+        sed -i 's:-msse -msse2:-msse -msse2:g' kaldi.mk
+        sed -i 's: -O1 : -O3 :g' kaldi.mk
+        make -j 8 online2 lm rnnlm
         touch ${KALDIROOT}/KALDIBUILT
         find ${KALDIROOT} -name "*.o" -exec rm {} \;
     fi
@@ -141,16 +141,16 @@ function prepareVOSKbuild_ARMARM64() {
         echo ${OPENBLAS_ARGS}
         if [[ $ARCH == "armhf" ]]; then
             make -C OpenBLAS ONLY_CBLAS=1 TARGET=ARMV7 ${OPENBLAS_ARGS} HOSTCC=/usr/bin/gcc USE_LOCKING=1 USE_THREAD=0 all
-        elif [[ $ARCH == "arm64" ]] || [[ $ARCH == "aarch64" ]]; then
+            elif [[ $ARCH == "arm64" ]] || [[ $ARCH == "aarch64" ]]; then
             make -C OpenBLAS ONLY_CBLAS=1 TARGET=ARMV8 ${OPENBLAS_ARGS} HOSTCC=/usr/bin/gcc USE_LOCKING=1 USE_THREAD=0 all
         fi
         make -C OpenBLAS ${OPENBLAS_ARGS} HOSTCC=gcc USE_LOCKING=1 USE_THREAD=0 PREFIX=$(pwd)/OpenBLAS/install install
         rm -rf clapack/BUILD
         mkdir -p clapack/BUILD && cd clapack/BUILD
         cmake -DCMAKE_C_FLAGS="$ARCHFLAGS" -DCMAKE_C_COMPILER_TARGET=$PODHOST \
-            -DCMAKE_C_COMPILER=$CC -DCMAKE_SYSTEM_NAME=Generic -DCMAKE_AR=$AR \
-            -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
-            -DCMAKE_CROSSCOMPILING=True ..
+        -DCMAKE_C_COMPILER=$CC -DCMAKE_SYSTEM_NAME=Generic -DCMAKE_AR=$AR \
+        -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
+        -DCMAKE_CROSSCOMPILING=True ..
         make HOSTCC=gcc -j 10 -C F2CLIBS
         make  HOSTCC=gcc -j 10 -C BLAS
         make HOSTCC=gcc  -j 10 -C SRC
@@ -189,7 +189,7 @@ function expToolchain() {
         export CROSS_TRIPLE=${PODHOST}
         export CROSS_COMPILE=${AMD64T}
         export GOARCH=amd64
-    elif [[ $ARCH == "arm64" ]] || [[ $ARCH == "aarch64" ]]; then
+        elif [[ $ARCH == "arm64" ]] || [[ $ARCH == "aarch64" ]]; then
         export CC=${ARM64T}gcc
         export CXX=${ARM64T}g++
         export LD=${ARM64T}ld
@@ -205,7 +205,7 @@ function expToolchain() {
         export GOARM=""
         export GOOS=linux
         export ARCHFLAGS=""
-    elif [[ $ARCH == "armhf" ]]; then
+        elif [[ $ARCH == "armhf" ]]; then
         export CC=${ARMT}gcc
         export CXX=${ARMT}g++
         export LD=${ARMT}ld
@@ -240,7 +240,7 @@ function doVOSKbuild() {
         fi
         cd vosk-api/src
         KALDI_ROOT=$KALDIROOT make EXTRA_LDFLAGS="-static-libstdc++" -j8
-	cd "${ORIGPATH}/build/${ARCH}"
+        cd "${ORIGPATH}/build/${ARCH}"
         mkdir -p "${BPREFIX}/lib"
         mkdir -p "${BPREFIX}/include"
         cp vosk-api/src/libvosk.so "${BPREFIX}/lib/"
@@ -270,7 +270,7 @@ function buildOPUS() {
     else
         echo "OGG already built for $ARCH"
     fi
-
+    
     if [[ ! -f built/${ARCH}/opus_built ]]; then
         cd build/${ARCH}
         rm -rf opus
@@ -290,10 +290,10 @@ function buildOPUS() {
 function buildWirePod() {
     ARCH=$1
     cd $ORIGPATH
-
+    
     # get the webroot, intent data, certs
     if [[ ! -d wire-pod ]]; then
-        git clone https://github.com/kercre123/wire-pod --branch=inbuilt-ble
+        git clone https://github.com/kercre123/wire-pod --depth=1
     fi
     DC=debcreate/${ARCH}
     WPC=wire-pod/chipper
@@ -312,26 +312,26 @@ function buildWirePod() {
     cp -rf built/$ARCH/include/vosk_api.h $DC/usr/include/
     cp -rf debfiles/wire-pod.service $DC/lib/systemd/system/
     cp -rf debfiles/config.ini $DC/etc/wire-pod/
-
+    
     # BUILD WIREPOD
     expToolchain $ARCH
-
-    export CGO_ENABLED=1 
-    export CGO_LDFLAGS="-L$(pwd)/built/$ARCH/lib -latomic" 
+    
+    export CGO_ENABLED=1
+    export CGO_LDFLAGS="-L$(pwd)/built/$ARCH/lib -latomic"
     export CGO_CFLAGS="-I$(pwd)/built/$ARCH/include"
-#    if [[ "$ARCH" == "arm64" ]]; then
-#	echo "unexporting"
-#	export CC="aarch64-linux-gnu-gcc"
-#	export LD="aarch64-linux-gnu-ld"
-#	export CXX="aarch64-linux-gnu-g++"
-#    export AR=""
-#    export FORTRAN=""
-#    export RANLIB=""
-#    export AS=""
-#    export CPP=""
-#    fi
+    #    if [[ "$ARCH" == "arm64" ]]; then
+    #	echo "unexporting"
+    #	export CC="aarch64-linux-gnu-gcc"
+    #	export LD="aarch64-linux-gnu-ld"
+    #	export CXX="aarch64-linux-gnu-g++"
+    #    export AR=""
+    #    export FORTRAN=""
+    #    export RANLIB=""
+    #    export AS=""
+    #    export CPP=""
+    #    fi
     go build \
-    -tags nolibopusfile \
+    -tags nolibopusfile,inbuiltble \
     -ldflags "-w -s" \
     -o $DC/usr/bin/wire-pod \
     ./pod/*.go
@@ -351,7 +351,7 @@ function prepareVOSKbuild() {
     ARCH=$1
     if [[ $ARCH == "armhf" ]] || [[ $ARCH == "arm64" ]]; then
         prepareVOSKbuild_ARMARM64 $ARCH
-    elif [[ $ARCH == "amd64" ]]; then
+        elif [[ $ARCH == "amd64" ]]; then
         prepareVOSKbuild_AMD64
     else
         echo "Error: unknown architecture: $ARCH"
@@ -363,16 +363,16 @@ function prepareVOSKbuild() {
 
 for arch in "${COMPILE_ARCHES[@]}"; do
     cd $ORIGPATH
-#    echo "Creating DEBIAN folder for $arch"
+    #    echo "Creating DEBIAN folder for $arch"
     createDEBIAN "$arch"
     doLibSodium "$arch"
     if [[ ! -f ${ORIGPATH}/built/$arch/lib/libvosk.so ]]; then
         echo "Compiling VOSK dependencies for $arch"
         prepareVOSKbuild "$arch"
     fi
-#    echo "Building VOSK for $arch (if needed)"
+    #    echo "Building VOSK for $arch (if needed)"
     doVOSKbuild "$arch"
-#    echo "Building OPUS for $arch (if needed)"
+    #    echo "Building OPUS for $arch (if needed)"
     buildOPUS "$arch"
     echo "Dependencies complete for $arch."
     echo "Building wire-pod for $arch..."
