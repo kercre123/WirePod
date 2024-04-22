@@ -16,8 +16,10 @@ if [[ ! $1 ]]; then
 	echo "You must provide a verison (./build.sh 1.0.0)"
 	exit 1
 fi
+ORIGVERSION=$1
 VERSION=${1#v}
 if [[ $1 == "main" ]]; then
+    ORIGVERSION=v1.0.0
     VERSION=1.0.0
 fi
 if [[ ! -d $TCHAIN ]]; then
@@ -54,7 +56,8 @@ cp -r ../../wire-pod/chipper/intent-data .
 cp -r ../../wire-pod/chipper/epod .
 cp -r ../../wire-pod/vector-cloud/pod-bot-install.sh .
 cp -r ../../wire-pod/chipper/weather-map.json .
-echo $VERSION > version
+cp -r ../../wire-pod/chipper/stttest.pcm .
+echo $ORIGVERSION > version
 zip -r static.zip .
 cd ..
 rm -f static.go
