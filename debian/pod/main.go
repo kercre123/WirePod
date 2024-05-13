@@ -51,6 +51,7 @@ func main() {
 	var webPort string
 	var perfMode string
 	var useVoskGrammer bool
+	var useMdns bool
 	f, err := ini.Load("/etc/wire-pod/config.ini")
 	if err != nil {
 		fmt.Println("Can't find /etc/wire-pod/config.ini, assuming port 8080")
@@ -85,6 +86,14 @@ func main() {
 					useVoskGrammer = true
 				}
 			}
+                        k, err = sec.GetKey("use_mdns")
+                        if err != nil {
+                                useMdns = false
+                        } else {
+                                if strings.TrimSpace(k.String()) == "true" {
+                                        useMdns = true
+                                }
+                        }
 		}
 	}
 	if *justIP {
@@ -95,6 +104,9 @@ func main() {
 	os.Setenv("WEBSERVER_PORT", webPort)
 	if useVoskGrammer {
 		os.Setenv("VOSK_WITH_GRAMMER", "true")
+	}
+	if useMdns {
+		os.Setenv("DISABLE_MDNS", "true")
 	}
 	vars.Packaged = true
 	os.UserConfigDir()
