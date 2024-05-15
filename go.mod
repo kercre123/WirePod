@@ -1,6 +1,6 @@
 module github.com/kercre123/WirePod
 
-go 1.21.4
+go 1.18
 
 require (
 	fyne.io/fyne/v2 v2.4.2
