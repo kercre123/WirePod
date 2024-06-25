@@ -2,6 +2,9 @@
 
 set -e
 
+WP_COMMIT_HASH=$(cd ../wire-pod && git rev-parse --short HEAD)
+GOLDFLAGS="-X 'github.com/kercre123/wire-pod/chipper/pkg/vars.CommitSHA=${WP_COMMIT_HASH}'"
+
 export PODVER="$1"
 
 if [[ ${PODVER} == "" ]]; then
@@ -54,7 +57,7 @@ function buildBinary() {
 
     go build \
     -tags nolibopusfile \
-    -ldflags "-w -s" \
+    -ldflags "-w -s ${GOLDFLAGS}" \
     -o tmp/WirePod-$1 \
     ./cmd
 }

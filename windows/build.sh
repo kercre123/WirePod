@@ -2,6 +2,9 @@
 
 export BUILDFILES="./cmd"
 
+WP_COMMIT_HASH=$(cd ../wire-pod && git rev-parse --short HEAD)
+GOLDFLAGS="-X 'github.com/kercre123/wire-pod/chipper/pkg/vars.CommitSHA=${WP_COMMIT_HASH}'"
+
 if [[ "$(uname -s)" == "Darwin" ]]; then
     export CC=x86_64-w64-mingw32-gcc
     export CXX=x86_64-w64-mingw32-g++
@@ -73,7 +76,7 @@ x86_64-w64-mingw32-windres cmd/rc/app.rc -O coff -o cmd/app.syso
 
 go build \
 -tags ${GO_TAGS} \
--ldflags "-H=windowsgui -w -s" \
+-ldflags "-H=windowsgui -w -s ${GOLDFLAGS}" \
 -o chipper.exe \
 ${BUILDFILES}
 

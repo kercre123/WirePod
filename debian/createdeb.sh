@@ -1,9 +1,14 @@
 #!/bin/bash
 
+
+
 #set -e
 
 COMPILE_ARCHES=(amd64 armhf arm64)
 #COMPILE_ARCHES=(arm64)
+
+WP_COMMIT_HASH=$(cd ../wire-pod && git rev-parse --short HEAD)
+GOLDFLAGS="-X 'github.com/kercre123/wire-pod/chipper/pkg/vars.CommitSHA=${WP_COMMIT_HASH}'"
 
 ORIGPATH="$(pwd)"
 
@@ -334,7 +339,7 @@ function buildWirePod() {
     #    fi
     go build \
     -tags nolibopusfile,inbuiltble \
-    -ldflags "-w -s" \
+    -ldflags "-w -s ${GOLDFLAGS}" \
     -o $DC/usr/bin/wire-pod \
     ./pod/*.go
 }

@@ -35,7 +35,7 @@ jobs:
           path: |
             ${{ github.workspace }}/macos/libs
             ${{ github.workspace }}/windows/libs
-          key: ${{ runner.os }}-libs-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-libs
       - name: Build for macOS
         run: cd macos && sudo ./build.sh ${{ github.ref_name }}
       - name: Copy macOS installer to default working directory
@@ -85,7 +85,7 @@ jobs:
           path: |
             ${{ github.workspace }}/android/android-14
             ${{ github.workspace }}/android/android-ndk
-          key: android-ndk-stuff-${{ hashFiles('**/go.sum') }}
+          key: android-ndk-stuff
       - name: Build .debs
         run: cd debian && ./createdeb.sh ${{ github.ref_name }}
       - name: Copy final .debs to working directory
