@@ -86,14 +86,14 @@ func main() {
 					useVoskGrammer = true
 				}
 			}
-                        k, err = sec.GetKey("use_mdns")
-                        if err != nil {
-                                useMdns = false
-                        } else {
-                                if strings.TrimSpace(k.String()) == "true" {
-                                        useMdns = true
-                                }
-                        }
+			k, err = sec.GetKey("use_mdns")
+			if err != nil {
+				useMdns = true
+			} else {
+				if strings.TrimSpace(k.String()) == "true" {
+					useMdns = true
+				}
+			}
 		}
 	}
 	if *justIP {
@@ -105,7 +105,7 @@ func main() {
 	if useVoskGrammer {
 		os.Setenv("VOSK_WITH_GRAMMER", "true")
 	}
-	if useMdns {
+	if !useMdns {
 		os.Setenv("DISABLE_MDNS", "true")
 	}
 	vars.Packaged = true
