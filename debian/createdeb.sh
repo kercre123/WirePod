@@ -20,7 +20,7 @@ DEBCREATEPATH="$(pwd)/debcreate"
 
 #sudo apt update -y
 #sudo apt upgrade -y
-sudo apt install -y libopus-dev libogg-dev build-essential pkg-config gcc-aarch64-linux-gnu libsodium-dev cmake libsoxr-dev
+sudo apt install -y libopus-dev libogg-dev build-essential pkg-config gcc-aarch64-linux-gnu libsodium-dev cmake
 
 # figure out arguments
 if [[ $1 == "" ]]; then
