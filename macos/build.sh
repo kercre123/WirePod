@@ -55,7 +55,7 @@ function buildBinary() {
         fi
         cd soxr
         mkdir build && cd build
-        cmake -DCMAKE_C_COMPILER_TARGET=${TARGET} -DCMAKE_C_COMPILER="${CC}" -DCMAKE_INSTALL_PREFIX="${PODLIBS}/soxr/$1" ..
+        cmake -DCMAKE_C_COMPILER_TARGET=${TARGET} -DCMAKE_C_COMPILER=${CC} -DCMAKE_CROSSCOMPILING=True -DCMAKE_INSTALL_PREFIX="${PODLIBS}/soxr/$1" ..
         make -j
         make install
         cd ${ORIGDIR}
