@@ -1,7 +1,5 @@
 #!/bin/bash
 
-
-
 #set -e
 
 COMPILE_ARCHES=(amd64 armhf arm64)
@@ -22,7 +20,7 @@ DEBCREATEPATH="$(pwd)/debcreate"
 
 #sudo apt update -y
 #sudo apt upgrade -y
-sudo apt install -y libopus-dev libogg-dev build-essential pkg-config gcc-aarch64-linux-gnu libsodium-dev
+sudo apt install -y libopus-dev libogg-dev build-essential pkg-config gcc-aarch64-linux-gnu libsodium-dev cmake
 
 # figure out arguments
 if [[ $1 == "" ]]; then
@@ -59,7 +57,7 @@ function createDEBIAN() {
     echo "Description: A replacement voice server for the Anki Vector robot." >> control
     echo "Homepage: https://github.com/kercre123/wire-pod" >> control
     echo "Architecture: $ARCH" >> control
-    echo "Depends: libopus0, libogg0, avahi-daemon, libatomic1, libsodium23" >> control
+    echo "Depends: libopus0, libogg0, avahi-daemon, libatomic1, libsodium23, libsoxr0" >> control
     cd $ORIGPATH
 }
 
@@ -80,6 +78,27 @@ function doLibSodium() {
         make -j6
         make install
         touch ${BUILTDIR}/sodium_built
+    fi
+}
+
+function doLibSoxr() {
+    ARCH=$1
+    cd $ORIGPATH
+    if [[ ! -f built/${ARCH}/soxr_built ]]; then
+        mkdir -p build/${ARCH}
+        mkdir -p built/${ARCH}
+        BUILTDIR="$(pwd)/built/${ARCH}"
+        cd build/${ARCH}
+        git clone https://github.com/chirlu/soxr.git
+        cd soxr
+        expToolchain $ARCH
+        mkdir build && cd build
+        cmake -DCMAKE_C_COMPILER_TARGET=$PODHOST \
+        -DCMAKE_C_COMPILER=$CC \
+        -DCMAKE_CROSSCOMPILING=True -DCMAKE_INSTALL_PREFIX="$BUILTDIR" ..
+        make -j6
+        make install
+        touch ${BUILTDIR}/soxr_built
     fi
 }
 
@@ -128,7 +147,7 @@ function prepareVOSKbuild_AMD64() {
 function prepareVOSKbuild_ARMARM64() {
     cd $ORIGPATH
     ARCH=$1
-    if [[ ${ARCH} == "amd64" ]]; then
+    if ([[ ${ARCH} == "amd64" ]]); then
         echo "prepareVOSKbuild_ARMARM64: this function is for armhf and arm64 only."
         exit 1
     fi
@@ -138,15 +157,15 @@ function prepareVOSKbuild_ARMARM64() {
     BPREFIX="$(pwd)/built/${ARCH}"
     cd build/${ARCH}
     expToolchain ${ARCH}
-    if [[ ! -f ${KALDIROOT}/KALDIBUILT ]]; then
+    if ([[ ! -f ${KALDIROOT}/KALDIBUILT ]]); then
         git clone -b vosk --single-branch https://github.com/alphacep/kaldi
         cd kaldi/tools
         git clone -b v0.3.20 --single-branch https://github.com/xianyi/OpenBLAS
         git clone -b v3.2.1  --single-branch https://github.com/alphacep/clapack
         echo ${OPENBLAS_ARGS}
-        if [[ $ARCH == "armhf" ]]; then
+        if ([[ $ARCH == "armhf" ]]); then
             make -C OpenBLAS ONLY_CBLAS=1 TARGET=ARMV7 ${OPENBLAS_ARGS} HOSTCC=/usr/bin/gcc USE_LOCKING=1 USE_THREAD=0 all
-            elif [[ $ARCH == "arm64" ]] || [[ $ARCH == "aarch64" ]]; then
+        elif ([[ $ARCH == "arm64" ]] || [[ $ARCH == "aarch64" ]]); then
             make -C OpenBLAS ONLY_CBLAS=1 TARGET=ARMV8 ${OPENBLAS_ARGS} HOSTCC=/usr/bin/gcc USE_LOCKING=1 USE_THREAD=0 all
         fi
         make -C OpenBLAS ${OPENBLAS_ARGS} HOSTCC=gcc USE_LOCKING=1 USE_THREAD=0 PREFIX=$(pwd)/OpenBLAS/install install
@@ -181,7 +200,7 @@ function prepareVOSKbuild_ARMARM64() {
 
 function expToolchain() {
     ARCH=$1
-    if [[ $ARCH == "amd64" ]]; then
+    if ([[ $ARCH == "amd64" ]]); then
         export CC=${AMD64T}gcc
         export CXX=${AMD64T}g++
         export LD=${AMD64T}ld
@@ -194,7 +213,7 @@ function expToolchain() {
         export CROSS_TRIPLE=${PODHOST}
         export CROSS_COMPILE=${AMD64T}
         export GOARCH=amd64
-        elif [[ $ARCH == "arm64" ]] || [[ $ARCH == "aarch64" ]]; then
+    elif ([[ $ARCH == "arm64" ]] || [[ $ARCH == "aarch64" ]]); then
         export CC=${ARM64T}gcc
         export CXX=${ARM64T}g++
         export LD=${ARM64T}ld
@@ -210,7 +229,7 @@ function expToolchain() {
         export GOARM=""
         export GOOS=linux
         export ARCHFLAGS=""
-        elif [[ $ARCH == "armhf" ]]; then
+    elif ([[ $ARCH == "armhf" ]]); then
         export CC=${ARMT}gcc
         export CXX=${ARMT}g++
         export LD=${ARMT}ld
@@ -237,10 +256,10 @@ function doVOSKbuild() {
     cd $ORIGPATH
     KALDIROOT="$(pwd)/build/${ARCH}/kaldi"
     BPREFIX="$(pwd)/built/${ARCH}"
-    if [[ ! -f ${BPREFIX}/lib/libvosk.so ]]; then
+    if ([[ ! -f ${BPREFIX}/lib/libvosk.so ]]); then
         cd build/${ARCH}
         expToolchain $ARCH
-        if [[ ! -d vosk-api ]]; then
+        if ([[ ! -d vosk-api ]]); then
             git clone https://github.com/alphacep/vosk-api --depth=1
         fi
         cd vosk-api/src
@@ -261,7 +280,7 @@ function buildOPUS() {
     cd $ORIGPATH
     BPREFIX="$(pwd)/built/${ARCH}"
     expToolchain $ARCH
-    if [[ ! -f built/${ARCH}/ogg_built ]]; then
+    if ([[ ! -f built/${ARCH}/ogg_built ]]); then
         cd build/${ARCH}
         rm -rf ogg
         git clone https://github.com/xiph/ogg --depth=1
@@ -276,7 +295,7 @@ function buildOPUS() {
         echo "OGG already built for $ARCH"
     fi
     
-    if [[ ! -f built/${ARCH}/opus_built ]]; then
+    if ([[ ! -f built/${ARCH}/opus_built ]]); then
         cd build/${ARCH}
         rm -rf opus
         git clone https://github.com/xiph/opus --depth=1
@@ -297,7 +316,7 @@ function buildWirePod() {
     cd $ORIGPATH
     
     # get the webroot, intent data, certs
-    if [[ ! -d wire-pod ]]; then
+    if ([[ ! -d wire-pod ]]); then
         git clone https://github.com/kercre123/wire-pod --depth=1
     fi
     DC=debcreate/${ARCH}
@@ -326,7 +345,7 @@ function buildWirePod() {
     export CGO_ENABLED=1
     export CGO_LDFLAGS="-L$(pwd)/built/$ARCH/lib -latomic"
     export CGO_CFLAGS="-I$(pwd)/built/$ARCH/include"
-    #    if [[ "$ARCH" == "arm64" ]]; then
+    #    if ([[ "$ARCH" == "arm64" ]]); then
     #	echo "unexporting"
     #	export CC="aarch64-linux-gnu-gcc"
     #	export LD="aarch64-linux-gnu-ld"
@@ -356,9 +375,9 @@ function finishDeb() {
 
 function prepareVOSKbuild() {
     ARCH=$1
-    if [[ $ARCH == "armhf" ]] || [[ $ARCH == "arm64" ]]; then
+    if ([[ $ARCH == "armhf" ]] || [[ $ARCH == "arm64" ]]); then
         prepareVOSKbuild_ARMARM64 $ARCH
-        elif [[ $ARCH == "amd64" ]]; then
+    elif ([[ $ARCH == "amd64" ]]); then
         prepareVOSKbuild_AMD64
     else
         echo "Error: unknown architecture: $ARCH"
@@ -367,13 +386,13 @@ function prepareVOSKbuild() {
 
 # start actually doing things
 
-
 for arch in "${COMPILE_ARCHES[@]}"; do
     cd $ORIGPATH
     #    echo "Creating DEBIAN folder for $arch"
     createDEBIAN "$arch"
     doLibSodium "$arch"
-    if [[ ! -f ${ORIGPATH}/built/$arch/lib/libvosk.so ]]; then
+    doLibSoxr "$arch"
+    if ([[ ! -f ${ORIGPATH}/built/$arch/lib/libvosk.so ]]); then
         echo "Compiling VOSK dependencies for $arch"
         prepareVOSKbuild "$arch"
     fi

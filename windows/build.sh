@@ -53,6 +53,18 @@ if [[ ! -d "${PODLIBS}/opus" ]]; then
     cd "${ORIGDIR}"
 fi
 
+if [[ ! -d "${PODLIBS}/soxr" ]]; then
+    echo "soxr directory doesn't exist. cloning and building"
+    rm -rf soxr
+    git clone https://github.com/chirlu/soxr --depth=1
+    cd soxr
+    mkdir build && cd build
+    cmake -DCMAKE_C_COMPILER_TARGET=${PODHOST} -DCMAKE_C_COMPILER=${CC} -DCMAKE_INSTALL_PREFIX="${PODLIBS}/soxr" ..
+    make -j
+    make install
+    cd "${ORIGDIR}"
+fi
+
 if [[ ! -d ${PODLIBS}/vosk ]]; then
     echo "getting vosk from alphacep releases page"
     cd "${PODLIBS}"
@@ -68,9 +80,9 @@ export ARCHITECTURE=amd64
 export GO_TAGS="nolibopusfile"
 
 export CGO_ENABLED=1
-export CGO_LDFLAGS="-L${PODLIBS}/ogg/lib -L${PODLIBS}/opus/lib -L${PODLIBS}/vosk"
-export CGO_CFLAGS="-I${PODLIBS}/ogg/include -I${PODLIBS}/opus/include -I${PODLIBS}/vosk"
-export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${PODLIBS}/opus/lib/pkgconfig
+export CGO_LDFLAGS="-L${PODLIBS}/ogg/lib -L${PODLIBS}/opus/lib -L${PODLIBS}/soxr/lib -L${PODLIBS}/vosk"
+export CGO_CFLAGS="-I${PODLIBS}/ogg/include -I${PODLIBS}/opus/include -I${PODLIBS}/soxr/include -I${PODLIBS}/vosk"
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${PODLIBS}/opus/lib/pkgconfig:${PODLIBS}/soxr/lib/pkgconfig
 
 x86_64-w64-mingw32-windres cmd/rc/app.rc -O coff -o cmd/app.syso
 
@@ -108,6 +120,7 @@ cp chipper.exe tmp/wire-pod/chipper/
 
 cp ${PODLIBS}/opus/bin/libopus-0.dll tmp/wire-pod/chipper/
 cp ${PODLIBS}/ogg/bin/libogg-0.dll tmp/wire-pod/chipper/
+cp ${PODLIBS}/soxr/bin/libsoxr-0.dll tmp/wire-pod/chipper/
 cp ${PODLIBS}/vosk/* tmp/wire-pod/chipper/
 rm tmp/wire-pod/chipper/libvosk.lib
 
