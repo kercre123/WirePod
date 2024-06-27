@@ -59,7 +59,7 @@ if [[ ! -d "${PODLIBS}/soxr" ]]; then
     git clone https://github.com/chirlu/soxr --depth=1
     cd soxr
     mkdir build && cd build
-    cmake -DCMAKE_C_COMPILER_TARGET=${PODHOST}  -DCMAKE_CROSSCOMPILING=True -DCMAKE_C_COMPILER=${CC} -DCMAKE_INSTALL_PREFIX="${PODLIBS}/soxr" ..
+    cmake -DCMAKE_C_COMPILER_TARGET=${PODHOST}  -DCMAKE_CROSSCOMPILING=True -DCMAKE_SYSTEM_NAME=Generic -DCMAKE_C_COMPILER=${CC} -DCMAKE_INSTALL_PREFIX="${PODLIBS}/soxr" ..
     make -j
     make install
     cd "${ORIGDIR}"

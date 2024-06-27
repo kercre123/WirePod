@@ -94,7 +94,7 @@ function doLibSoxr() {
         expToolchain $ARCH
         mkdir build && cd build
         cmake -DCMAKE_C_COMPILER_TARGET=$PODHOST \
-        -DCMAKE_C_COMPILER=$CC \
+        -DCMAKE_C_COMPILER=$CC -DCMAKE_SYSTEM_NAME=Generic \
         -DCMAKE_CROSSCOMPILING=True -DCMAKE_INSTALL_PREFIX="$BUILTDIR" ..
         make -j6
         make install

@@ -55,7 +55,7 @@ function buildBinary() {
         fi
         cd soxr
         mkdir build && cd build
-        cmake -DCMAKE_C_COMPILER_TARGET=${TARGET} -DCMAKE_CROSSCOMPILING=True -DCMAKE_C_COMPILER="clang" -DCMAKE_C_FLAGS="-target ${TARGET} -mmacosx-version-min=11" -DCMAKE_INSTALL_PREFIX="${PODLIBS}/soxr/$1" ..
+        cmake -DCMAKE_C_COMPILER_TARGET=${TARGET} -DCMAKE_CROSSCOMPILING=True -DCMAKE_SYSTEM_NAME=Generic -DCMAKE_C_COMPILER="clang" -DCMAKE_C_FLAGS="-target ${TARGET} -mmacosx-version-min=11 -Wimplicit-function-declaration" -DCMAKE_INSTALL_PREFIX="${PODLIBS}/soxr/$1" ..
         make -j
         make install
         cd ${ORIGDIR}
