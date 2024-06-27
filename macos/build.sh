@@ -8,8 +8,8 @@ GOLDFLAGS="-X 'github.com/kercre123/wire-pod/chipper/pkg/vars.CommitSHA=${WP_COM
 export PODVER="$1"
 
 if [[ ${PODVER} == "" ]]; then
-    echo "You must provide a version (v1.0.0)."
-    exit 0
+	echo "You must provide a version (v1.0.0)."
+	exit 0
 fi
 
 sudo -u $SUDO_USER brew install autoconf automake libtool create-dmg wget pkg-config
@@ -47,26 +47,12 @@ function buildBinary() {
         cd ${ORIGDIR}
     fi
 
-    if [[ ! -d ${PODLIBS}/soxr/$1 ]]; then
-        if [[ ! -d soxr ]]; then
-            echo "soxr directory doesn't exist. cloning"
-            rm -rf soxr
-            git clone https://github.com/chirlu/soxr --depth=1
-        fi
-        cd soxr
-        mkdir build && cd build
-        cmake -DCMAKE_C_COMPILER_TARGET=${TARGET} -DCMAKE_C_COMPILER=${CC} -DCMAKE_CROSSCOMPILING=True -DCMAKE_INSTALL_PREFIX="${PODLIBS}/soxr/$1" ..
-        make -j
-        make install
-        cd ${ORIGDIR}
-    fi
-
     export GOOS=darwin
     export GOARCH=$1
     export CGO_ENABLED=1
-    export CGO_LDFLAGS="-L${PODLIBS}/opus/$1/lib -L${PODLIBS}/soxr/$1/lib -L${PODLIBS}/vosk -mmacosx-version-min=11"
-    export CGO_CFLAGS="-I${PODLIBS}/opus/$1/include -I${PODLIBS}/soxr/$1/include -I${PODLIBS}/vosk -mmacosx-version-min=11"
-    export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${PODLIBS}/opus/$1/lib/pkgconfig:${PODLIBS}/soxr/$1/lib/pkgconfig
+    export CGO_LDFLAGS="-L${PODLIBS}/opus/$1/lib -L${PODLIBS}/vosk -mmacosx-version-min=11"
+    export CGO_CFLAGS="-I${PODLIBS}/opus/$1/include -I${PODLIBS}/vosk -mmacosx-version-min=11"
+    export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:${PODLIBS}/opus/$1/lib/pkgconfig
     export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
 
     go build \
@@ -84,7 +70,7 @@ function buildApp() {
     mkdir -p ${PODLIBS}
 
     if [[ ! -d ${PODLIBS}/vosk ]]; then
-        echo "getting vosk from alphacep releases page"
+        echo "getting vosk from alphacep releases page"  
         cd ${PODLIBS}
         wget https://github.com/alphacep/vosk-api/releases/download/v0.3.42/vosk-osx-0.3.42.zip
         unzip vosk-osx-0.3.42.zip
@@ -110,12 +96,11 @@ function buildApp() {
     buildBinary "amd64"
 
     sudo lipo -create ${PODLIBS}/opus/arm64/lib/libopus.0.dylib ${PODLIBS}/opus/amd64/lib/libopus.0.dylib -output ${PODLIBS}/opus/libopus.0.dylib
-    sudo lipo -create ${PODLIBS}/soxr/arm64/lib/libsoxr.0.dylib ${PODLIBS}/soxr/amd64/lib/libsoxr.0.dylib -output ${PODLIBS}/soxr/libsoxr.0.dylib
     sudo lipo -create tmp/WirePod-arm64 tmp/WirePod-amd64 -output ${MACOS}/WirePod
 
-    echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > $PLISTFILE
-    echo "<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> $PLISTFILE
-    echo "<plist version=\"1.0\">" >> $PLISTFILE
+    echo "<?xml version="1.0" encoding="UTF-8"?>" > $PLISTFILE
+    echo "<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">" >> $PLISTFILE
+    echo "<plist version="1.0">" >> $PLISTFILE
     echo "<dict>" >> $PLISTFILE
     echo "  <key>CFBundleGetInfoString</key>" >> $PLISTFILE
     echo "  <string>WirePod</string>" >> $PLISTFILE
@@ -145,8 +130,7 @@ function buildApp() {
     cp -r ../icons/* ${RESOURCES}
     cp -r ../icons ${RESOURCES}/
     echo "${PODVER}" > ${RESOURCES}/version
-    cp ${PODLIBS}/opus/libopus.0.dylib ${FRAMEWORKS}
-    cp ${PODLIBS}/soxr/libsoxr.0.dylib ${FRAMEWORKS}
+    cp ${PODLIBS}/opus/libopus.0.dylib ${FRAMEWORKS}    
     cp ${PODLIBS}/vosk/libvosk.dylib ${FRAMEWORKS}
     cp ${CHPATH}/weather-map.json ${CHIPPER}
     cp -r ${CHPATH}/intent-data ${CHIPPER}
@@ -165,16 +149,6 @@ function buildApp() {
     sudo install_name_tool \
     -change ${PODLIBS}/opus/amd64/lib/libopus.0.dylib \
     @executable_path/../Frameworks/libopus.0.dylib \
-    ${APPDIR}/MacOS/WirePod
-
-    sudo install_name_tool \
-    -change ${PODLIBS}/soxr/arm64/lib/libsoxr.0.dylib \
-    @executable_path/../Frameworks/libsoxr.0.dylib \
-    ${APPDIR}/MacOS/WirePod
-
-    sudo install_name_tool \
-    -change ${PODLIBS}/soxr/amd64/lib/libsoxr.0.dylib \
-    @executable_path/../Frameworks/libsoxr.0.dylib \
     ${APPDIR}/MacOS/WirePod
 
     sudo install_name_tool \
