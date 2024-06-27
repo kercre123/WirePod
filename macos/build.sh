@@ -12,7 +12,7 @@ if [[ ${PODVER} == "" ]]; then
     exit 0
 fi
 
-sudo -u $SUDO_USER brew install autoconf automake libtool create-dmg wget pkg-config
+sudo -u $SUDO_USER brew install autoconf automake libtool create-dmg wget pkg-config libsoxr
 
 export ORIGDIR="$(pwd)"
 export PODLIBS="${ORIGDIR}/libs"
@@ -55,7 +55,7 @@ function buildBinary() {
         fi
         cd soxr
         mkdir build && cd build
-        cmake -DCMAKE_C_COMPILER_TARGET=${TARGET} -DCMAKE_C_COMPILER="${CC}" -DCMAKE_INSTALL_PREFIX="${PODLIBS}/soxr/$1" ..
+        cmake -DCMAKE_C_COMPILER_TARGET=${TARGET} -DCMAKE_CROSSCOMPILING=True -DCMAKE_C_COMPILER="clang" -DCMAKE_C_FLAGS="-target ${TARGET} -mmacosx-version-min=11" -DCMAKE_INSTALL_PREFIX="${PODLIBS}/soxr/$1" ..
         make -j
         make install
         cd ${ORIGDIR}
