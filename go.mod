@@ -9,11 +9,11 @@ require (
 	github.com/fforchino/vector-go-sdk v0.0.0-20231108155304-62168f3595d6
 	github.com/getlantern/systray v1.2.2
 	github.com/go-ole/go-ole v1.3.0
-	github.com/kercre123/wire-pod/chipper v1.5.0
+	github.com/kercre123/wire-pod/chipper v1.5.1
 	github.com/ncruces/zenity v0.10.10
 	github.com/soheilhy/cmux v0.1.5
 	github.com/wlynxg/anet v0.0.1
-	golang.org/x/sys v0.15.0
+	golang.org/x/sys v0.18.0
 	gopkg.in/ini.v1 v1.67.0
 )
 
@@ -89,12 +89,12 @@ require (
 	github.com/tevino/abool v1.2.0 // indirect
 	github.com/yuin/goldmark v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.16.0 // indirect
+	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/exp v0.0.0-20231206192017-f3f8817b8deb // indirect
 	golang.org/x/image v0.14.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/net v0.22.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.16.0 // indirect
 	google.golang.org/genproto v0.0.0-20231127180814-3a041ad873d4 // indirect
