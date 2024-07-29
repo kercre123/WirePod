@@ -394,8 +394,8 @@ github.com/karrick/godirwalk v1.8.0/go.mod h1:H5KPZjojv4lE+QYImBI8xVtrBRgYrIVsaR
 github.com/karrick/godirwalk v1.10.3/go.mod h1:RoGL9dQei4vP9ilrpETWE8CLOZ1kiN0LhBygSwrAsHA=
 github.com/kercre123/vosk-api/go v1.0.2 h1:NDJUNv2ddw128amiVZ2xE2gKfKHeBRRhboSh+yiH6Wg=
 github.com/kercre123/vosk-api/go v1.0.2/go.mod h1:oVZG/VFmg23uNDzjShcw7UhZHWYG2zXgBm5FqioE2Ao=
-github.com/kercre123/wire-pod/chipper v1.5.1 h1:CQu2UrAnwpYxGQAiYd5XJlMGPhUadPivJ58xHOPSzFU=
-github.com/kercre123/wire-pod/chipper v1.5.1/go.mod h1:S4AuJwz9BIBYfpiDUv31SEqJKIEXeZWruygx4x0/IZQ=
+github.com/kercre123/wire-pod/chipper v1.5.2 h1:57x3PyIaxXiEAhkNpQM05a2Eh85kiKUfeMRjDprGRLY=
+github.com/kercre123/wire-pod/chipper v1.5.2/go.mod h1:S4AuJwz9BIBYfpiDUv31SEqJKIEXeZWruygx4x0/IZQ=
 github.com/kercre123/zeroconf v1.0.1 h1:Mbd8mN6xnNWYIqBN38x3jJjiPP2RmK4orzbGZsa1EOY=
 github.com/kercre123/zeroconf v1.0.1/go.mod h1:qYGgej0DBUELb5p0zVe8yvz3NIwJs+ws9/QD6FJOCS8=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
