@@ -1,0 +1,1023 @@
+SETUP OF THIS FILE:{
+This file is structed as following:
+This file contains context from the folder chipper and the following folders:
+/wire-pod/pkg/servers/chipper
+/wire-pod/pkg/servers/jdocs
+/wire-pod/pkg/servers/token
+/wire-pod/chipper/pkg/vars
+/wire-pod/chipper/pkg/vtt
+Since this code base is quiet large i will make multiple files for you to understand the context better this is part 2
+
+I will first give you the path to the file, then i will give you either the full file code or  just the snippets if they take too much space, if its a snippet i will place "SNIPPET" after the path, if there is no "SNIPPET" you can assume its the full file code
+For some files i will add some comments to descirbe them if the other files look the same to save space and memory this will be indicated with "EXTRA CONTEXT" at the end of the code from that file 
+}
+
+/wire-pod/chipper/pkg/servers/chipper/connectioncheck.go
+package server
+
+import (
+	"context"
+	"strconv"
+	"time"
+
+	pb "github.com/digital-dream-labs/api/go/chipperpb"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+)
+
+const (
+	connectionCheckTimeout = 15 * time.Second
+	check                  = "check"
+)
+
+// StreamingConnectionCheck is used by the end device to make sure it can successfully communicate
+func (s *Server) StreamingConnectionCheck(stream pb.ChipperGrpc_StreamingConnectionCheckServer) error {
+	req, err := stream.Recv()
+	logger.Println("Incoming connection check from " + req.DeviceId)
+	if err != nil {
+		logger.Println("Connection check unexpected error")
+		logger.Println(err)
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(stream.Context(), connectionCheckTimeout)
+	defer cancel()
+
+	framesPerRequest := req.TotalAudioMs / req.AudioPerRequest
+
+	var toSend pb.ConnectionCheckResponse
+
+	// count frames, we already pulled the first one
+	frames := uint32(1)
+	toSend.FramesReceived = frames
+receiveLoop:
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Println("Connection check expiration. Frames Received: " + strconv.Itoa(int(frames)))
+			toSend.Status = "Timeout"
+			break receiveLoop
+		default:
+			req, suberr := stream.Recv()
+
+			if suberr != nil || req == nil {
+				err = suberr
+				logger.Println("Connection check unexpected error. Frames Received: " + strconv.Itoa(int(frames)))
+				logger.Println(err)
+
+				toSend.Status = "Error"
+				break receiveLoop
+			}
+
+			frames++
+			toSend.FramesReceived = frames
+			if frames >= framesPerRequest {
+				logger.Println("Connection check success")
+				toSend.Status = "Success"
+				break receiveLoop
+			}
+		}
+	}
+	senderr := stream.Send(&toSend)
+	if senderr != nil {
+		logger.Println("Failed to send connection check response to client")
+		logger.Println(err)
+		return senderr
+	}
+	return err
+
+}
+
+/wire-pod/chipper/pkg/servers/chipper/intent_graph.go
+package server
+
+import (
+	"time"
+
+	pb "github.com/digital-dream-labs/api/go/chipperpb"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vtt"
+)
+
+// StreamingIntentGraph handles intent graph request streams
+func (s *Server) StreamingIntentGraph(stream pb.ChipperGrpc_StreamingIntentGraphServer) error {
+	recvTime := time.Now()
+
+	req, err := stream.Recv()
+	if err != nil {
+		logger.Println("Intent graph stream error")
+		logger.Println(err)
+
+		return err
+	}
+
+	if _, err = s.intentGraph.ProcessIntentGraph(
+		&vtt.IntentGraphRequest{
+			Time:       recvTime,
+			Stream:     stream,
+			Device:     req.DeviceId,
+			Session:    req.Session,
+			LangString: req.LanguageCode.String(),
+			FirstReq:   req,
+			AudioCodec: req.AudioEncoding,
+			// Mode:
+		},
+	); err != nil {
+		logger.Println("Intent graph processing error")
+		logger.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+/wire-pod/chipper/pkg/servers/chipper/intent.go
+package server
+
+import (
+	"time"
+
+	pb "github.com/digital-dream-labs/api/go/chipperpb"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vtt"
+)
+
+// StreamingIntent handles voice streams
+func (s *Server) StreamingIntent(stream pb.ChipperGrpc_StreamingIntentServer) error {
+	recvTime := time.Now()
+
+	req, err := stream.Recv()
+	if err != nil {
+		logger.Println("Intent error")
+		logger.Println(err)
+
+		return err
+	}
+
+	if _, err = s.intent.ProcessIntent(
+		&vtt.IntentRequest{
+			Time:       recvTime,
+			Stream:     stream,
+			Device:     req.DeviceId,
+			Session:    req.Session,
+			LangString: req.LanguageCode.String(),
+			FirstReq:   req,
+			AudioCodec: req.AudioEncoding,
+			// Mode:
+		},
+	); err != nil {
+		logger.Println("Intent error")
+		logger.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+/wire-pod/chipper/pkg/servers/chipper/knowledgegraph.go
+package server
+
+import (
+	"time"
+
+	pb "github.com/digital-dream-labs/api/go/chipperpb"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vtt"
+)
+
+// StreamingKnowledgeGraph is used for knowledge graph request/responses
+func (s *Server) StreamingKnowledgeGraph(stream pb.ChipperGrpc_StreamingKnowledgeGraphServer) error {
+	recvTime := time.Now()
+	req, err := stream.Recv()
+	if err != nil {
+		logger.Println("Knowledge graph error")
+		logger.Println(err)
+
+		return err
+	}
+
+	if _, err = s.kg.ProcessKnowledgeGraph(
+		&vtt.KnowledgeGraphRequest{
+			Time:       recvTime,
+			Stream:     stream,
+			Device:     req.DeviceId,
+			Session:    req.Session,
+			LangString: req.LanguageCode.String(),
+			FirstReq:   req,
+			AudioCodec: req.AudioEncoding,
+			// Why is this not passed
+			// Mode:
+		},
+	); err != nil {
+		logger.Println("Knowledge graph error")
+		logger.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+/wire-pod/chipper/pkg/servers/chipper/options.go
+package server
+
+import "github.com/digital-dream-labs/hugh/log"
+
+type options struct {
+	log         log.Logger
+	intent      intentProcessor
+	kg          kgProcessor
+	intentGraph intentGraphProcessor
+}
+
+// Option is the list of options
+type Option func(*options)
+
+// WithLogger sets the logger
+func WithLogger(l log.Logger) Option {
+	return func(o *options) {
+		o.log = l
+	}
+}
+
+// WithIntentProcessor sets the intent processor
+func WithIntentProcessor(s intentProcessor) Option {
+	return func(o *options) {
+		o.intent = s
+	}
+}
+
+// WithKnowledgeGraphProcessor sets the knowledge graph processor
+func WithKnowledgeGraphProcessor(s kgProcessor) Option {
+	return func(o *options) {
+		o.kg = s
+	}
+}
+
+// WithKnowledgeGraphProcessor sets the knowledge graph processor
+func WithIntentGraphProcessor(s intentGraphProcessor) Option {
+	return func(o *options) {
+		o.intentGraph = s
+	}
+}
+
+/wire-pod/chipper/pkg/servers/chipper/server.gopackage server
+
+import (
+	pb "github.com/digital-dream-labs/api/go/chipperpb"
+	"github.com/kercre123/wire-pod/chipper/pkg/vtt"
+)
+
+type intentProcessor interface {
+	ProcessIntent(*vtt.IntentRequest) (*vtt.IntentResponse, error)
+}
+
+type kgProcessor interface {
+	ProcessKnowledgeGraph(*vtt.KnowledgeGraphRequest) (*vtt.KnowledgeGraphResponse, error)
+}
+
+type intentGraphProcessor interface {
+	ProcessIntentGraph(*vtt.IntentGraphRequest) (*vtt.IntentGraphResponse, error)
+}
+
+// Server defines the service used.
+type Server struct {
+	intent      intentProcessor
+	kg          kgProcessor
+	intentGraph intentGraphProcessor
+
+	pb.UnimplementedChipperGrpcServer
+}
+
+// New accepts a list of args and returns the service
+func New(opts ...Option) (*Server, error) {
+	cfg := options{
+		//log: log.Base(),
+	}
+
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	s := Server{
+		intent:      cfg.intent,
+		kg:          cfg.kg,
+		intentGraph: cfg.intentGraph,
+	}
+
+	return &s, nil
+
+}
+
+/wire-pod/chipper/pkg/servers/chipper/textintent.go
+package server
+
+import (
+	"context"
+
+	pb "github.com/digital-dream-labs/api/go/chipperpb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+// TextIntent handles text-based request/responses from the device
+func (s *Server) TextIntent(ctx context.Context, req *pb.TextRequest) (*pb.IntentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "")
+}
+
+
+/wire-pod/chipper/pkg/servers/jdocs
+EXTRA CONTEXT: This folder contains the setup for jdocs server let me know if you need it but will leave it out for now dont htink we need to touch that it contains the file botinfoStorer.go and server.go
+/wire-pod/chipper/pkg/servers/token
+EXTRA CONTEXT: This folder has logic for the gpg key generation let me know if you need it but will leave it out for now dont htink we need to touch that it contains the file hashing.go and token.go
+
+
+
+/wire-pod/chipper/pkg/vars/config.go
+
+package vars
+
+import (
+	"encoding/json"
+	"os"
+
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+)
+
+// a way to create a JSON configuration for wire-pod, rather than the use of env vars
+
+var ApiConfigPath = "./apiConfig.json"
+
+var APIConfig apiConfig
+
+type apiConfig struct {
+	Weather struct {
+		Enable   bool   `json:"enable"`
+		Provider string `json:"provider"`
+		Key      string `json:"key"`
+		Unit     string `json:"unit"`
+	} `json:"weather"`
+	Knowledge struct {
+		Enable                 bool    `json:"enable"`
+		Provider               string  `json:"provider"`
+		Key                    string  `json:"key"`
+		ID                     string  `json:"id"`
+		Model                  string  `json:"model"`
+		IntentGraph            bool    `json:"intentgraph"`
+		RobotName              string  `json:"robotName"`
+		OpenAIPrompt           string  `json:"openai_prompt"`
+		OpenAIVoice            string  `json:"openai_voice"`
+		OpenAIVoiceWithEnglish bool    `json:"openai_voice_with_english"`
+		SaveChat               bool    `json:"save_chat"`
+		CommandsEnable         bool    `json:"commands_enable"`
+		Endpoint               string  `json:"endpoint"`
+		TopP                   float32 `json:"top_p"`
+		Temperature            float32 `json:"temp"`
+	} `json:"knowledge"`
+	STT struct {
+		Service  string `json:"provider"`
+		Language string `json:"language"`
+	} `json:"STT"`
+	Server struct {
+		// false for ip, true for escape pod
+		EPConfig bool   `json:"epconfig"`
+		Port     string `json:"port"`
+	} `json:"server"`
+	HasReadFromEnv   bool `json:"hasreadfromenv"`
+	PastInitialSetup bool `json:"pastinitialsetup"`
+}
+
+func WriteConfigToDisk() {
+	logger.Println("Configuration changed, writing to disk")
+	writeBytes, _ := json.Marshal(APIConfig)
+	os.WriteFile(ApiConfigPath, writeBytes, 0644)
+}
+
+func CreateConfigFromEnv() {
+	// if no config exists, create it
+	if os.Getenv("WEATHERAPI_ENABLED") == "true" {
+		APIConfig.Weather.Enable = true
+		APIConfig.Weather.Provider = os.Getenv("WEATHERAPI_PROVIDER")
+		APIConfig.Weather.Key = os.Getenv("WEATHERAPI_KEY")
+		APIConfig.Weather.Unit = os.Getenv("WEATHERAPI_UNIT")
+	} else {
+		APIConfig.Weather.Enable = false
+	}
+	if os.Getenv("KNOWLEDGE_ENABLED") == "true" {
+		APIConfig.Knowledge.Enable = true
+		APIConfig.Knowledge.Provider = os.Getenv("KNOWLEDGE_PROVIDER")
+		if os.Getenv("KNOWLEDGE_PROVIDER") == "houndify" {
+			APIConfig.Knowledge.ID = os.Getenv("KNOWLEDGE_ID")
+		}
+		APIConfig.Knowledge.Key = os.Getenv("KNOWLEDGE_KEY")
+	} else {
+		APIConfig.Knowledge.Enable = false
+	}
+	WriteSTT()
+	APIConfig.HasReadFromEnv = true
+	writeBytes, _ := json.Marshal(APIConfig)
+	os.WriteFile(ApiConfigPath, writeBytes, 0644)
+}
+
+func WriteSTT() {
+	// was not part of the original code, so this is its own function
+	// launched if stt not found in config
+	APIConfig.STT.Service = os.Getenv("STT_SERVICE")
+	if os.Getenv("STT_SERVICE") == "vosk" || os.Getenv("STT_SERVICE") == "whisper.cpp" {
+		APIConfig.STT.Language = os.Getenv("STT_LANGUAGE")
+	}
+}
+
+func ReadConfig() {
+	if _, err := os.Stat(ApiConfigPath); err != nil {
+		CreateConfigFromEnv()
+		logger.Println("API config JSON created")
+	} else {
+		// read config
+		configBytes, err := os.ReadFile(ApiConfigPath)
+		if err != nil {
+			APIConfig.Knowledge.Enable = false
+			APIConfig.Weather.Enable = false
+			logger.Println("Failed to read API config file")
+			logger.Println(err)
+			return
+		}
+		err = json.Unmarshal(configBytes, &APIConfig)
+		if err != nil {
+			APIConfig.Knowledge.Enable = false
+			APIConfig.Weather.Enable = false
+			logger.Println("Failed to unmarshal API config JSON")
+			logger.Println(err)
+			return
+		}
+		// stt service is the only thing controlled by shell
+		if APIConfig.STT.Service != os.Getenv("STT_SERVICE") {
+			WriteSTT()
+		}
+		if !APIConfig.HasReadFromEnv {
+			if APIConfig.Server.Port != os.Getenv("DDL_RPC_PORT") {
+				APIConfig.HasReadFromEnv = true
+				APIConfig.PastInitialSetup = true
+			}
+		}
+
+		if APIConfig.Knowledge.Model == "meta-llama/Llama-2-70b-chat-hf" {
+			logger.Println("Setting Together model to Llama3")
+			APIConfig.Knowledge.Model = "meta-llama/Llama-3-70b-chat-hf"
+		}
+
+		writeBytes, _ := json.Marshal(APIConfig)
+		os.WriteFile(ApiConfigPath, writeBytes, 0644)
+		logger.Println("API config successfully read")
+	}
+}
+
+/wire-pod/chipper/pkg/vars/vars.go
+package vars
+
+import (
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
+	"errors"
+	"fmt"
+	"net"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strconv"
+	"strings"
+
+	"github.com/fforchino/vector-go-sdk/pkg/vector"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/sashabaranov/go-openai"
+	"github.com/wlynxg/anet"
+)
+
+var CommitSHA string
+
+// initialize variables so they don't have to be found during runtime
+
+var VarsInited bool
+
+// if compiled into an installation package. wire-pod will use os.UserConfigDir()
+var Packaged bool
+
+var IsPackagedLinux bool
+
+var AndroidPath string
+
+var (
+	JdocsPath         string = "./jdocs/jdocs.json"
+	JdocsDir          string = "./jdocs"
+	CustomIntentsPath string = "./customIntents.json"
+	BotConfigsPath    string = "./botConfig.json"
+	BotInfoPath       string = "./jdocs/botSdkInfo.json"
+	BotInfoName       string = "botSdkInfo.json"
+	PodName           string = "wire-pod"
+	VoskModelPath     string = "../vosk/models/"
+	WhisperModelPath  string = "../whisper.cpp/models/"
+	SessionCertPath   string = "./session-certs/"
+	VersionFile       string = "./version"
+)
+
+var (
+	OutboundIPTester = "8.8.8.8:80"
+	CertPath         = "../certs/cert.crt"
+	KeyPath          = "../certs/cert.key"
+	ServerConfigPath = "../certs/server_config.json"
+	Certs            = "../certs"
+)
+
+var WebPort string = "8080"
+
+// /home/name/.anki_vector/
+var SDKIniPath string
+var BotJdocs []botjdoc
+var BotInfo RobotInfoStore
+var CustomIntents []CustomIntent
+var CustomIntentsExist bool = false
+var DownloadedVoskModels []string
+var VoskGrammerEnable bool = false
+
+// here to prevent import cycle (localization restructure)
+var SttInitFunc func() error
+
+var IntentList []JsonIntent
+
+//var MatchListList [][]string
+// var IntentsList = []string{}
+
+var ChipperCert []byte
+var ChipperKey []byte
+var ChipperKeysLoaded bool
+
+var RecurringInfo []RecurringInfoStore
+
+type RememberedChat struct {
+	ESN   string                         `json:"esn"`
+	Chats []openai.ChatCompletionMessage `json:"chats"`
+}
+
+var RememberedChats []RememberedChat
+
+type RobotInfoStore struct {
+	GlobalGUID string `json:"global_guid"`
+	Robots     []struct {
+		Esn       string `json:"esn"`
+		IPAddress string `json:"ip_address"`
+		// 192.168.1.150:443
+		GUID      string `json:"guid"`
+		Activated bool   `json:"activated"`
+	} `json:"robots"`
+}
+
+type RecurringInfoStore struct {
+	// Vector-R2D2
+	ID string `json:"id"`
+	// 00e20145
+	ESN string `json:"esn"`
+	// 192.168.1.150
+	IP string `json:"ip"`
+}
+
+type JsonIntent struct {
+	Name              string   `json:"name"`
+	Keyphrases        []string `json:"keyphrases"`
+	RequireExactMatch bool     `json:"requiresexact"`
+}
+
+type CustomIntent struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Utterances  []string `json:"utterances"`
+	Intent      string   `json:"intent"`
+	Params      struct {
+		ParamName  string `json:"paramname"`
+		ParamValue string `json:"paramvalue"`
+	} `json:"params"`
+	Exec           string   `json:"exec"`
+	ExecArgs       []string `json:"execargs"`
+	IsSystemIntent bool     `json:"issystem"`
+	LuaScript      string   `json:"luascript"`
+}
+
+type AJdoc struct {
+	DocVersion     uint64 `protobuf:"varint,1,opt,name=doc_version,json=docVersion,proto3" json:"doc_version,omitempty"`            // first version = 1; 0 => invalid or doesn't exist
+	FmtVersion     uint64 `protobuf:"varint,2,opt,name=fmt_version,json=fmtVersion,proto3" json:"fmt_version,omitempty"`            // first version = 1; 0 => invalid
+	ClientMetadata string `protobuf:"bytes,3,opt,name=client_metadata,json=clientMetadata,proto3" json:"client_metadata,omitempty"` // arbitrary client-defined string, eg a data fingerprint (typ "", 32 chars max)
+	JsonDoc        string `protobuf:"bytes,4,opt,name=json_doc,json=jsonDoc,proto3" json:"json_doc,omitempty"`
+}
+
+type botjdoc struct {
+	// vic:00000000
+	Thing string `json:"thing"`
+	// vic.RobotSettings, etc
+	Name string `json:"name"`
+	// actual jdoc
+	Jdoc AJdoc `json:"jdoc"`
+}
+
+func join(p1, p2 string) string {
+	return filepath.Join(p1, p2)
+}
+
+func Init() {
+	logger.Println("Commit SHA: " + CommitSHA)
+	if VarsInited {
+		logger.Println("Not initting vars again")
+		return
+	}
+	logger.Println("Initializing variables")
+
+	if Packaged {
+		logger.Println("This version of wire-pod is packaged. Set vars to include UserConfigDir...")
+		var confDir string
+		if runtime.GOOS == "android" || runtime.GOOS == "ios" {
+			confDir = AndroidPath
+		} else {
+			confDir, _ = os.UserConfigDir()
+		}
+		podDir := join(confDir, PodName)
+		appDir, _ := os.Executable()
+		os.Mkdir(podDir, 0777)
+		JdocsDir = join(podDir, JdocsDir)
+		JdocsPath = JdocsDir + "/jdocs.json"
+		CustomIntentsPath = join(podDir, CustomIntentsPath)
+		BotConfigsPath = join(podDir, BotConfigsPath)
+		BotInfoPath = JdocsDir + "/" + BotInfoName
+		VoskModelPath = join(podDir, "./vosk/models/")
+		WhisperModelPath = join(filepath.Dir(appDir), "/../Frameworks/chipper/whisper.cpp/models/") // macos
+		ApiConfigPath = join(podDir, ApiConfigPath)
+		CertPath = join(podDir, "./certs/cert.crt")
+		KeyPath = join(podDir, "./certs/cert.key")
+		ServerConfigPath = join(podDir, "./certs/server_config.json")
+		Certs = join(podDir, "./certs")
+		SessionCertPath = join(podDir, SessionCertPath)
+		if runtime.GOOS == "android" {
+			VersionFile = AndroidPath + "/static/version"
+		}
+		os.Mkdir(JdocsDir, 0777)
+		os.Mkdir(SessionCertPath, 0777)
+		os.Mkdir(Certs, 0777)
+	}
+
+	if os.Getenv("WEBSERVER_PORT") != "" {
+		if _, err := strconv.Atoi(os.Getenv("WEBSERVER_PORT")); err == nil {
+			WebPort = os.Getenv("WEBSERVER_PORT")
+		} else {
+			logger.Println("WEBSERVER_PORT contains letters, using default of 8080")
+			WebPort = "8080"
+		}
+	} else {
+		WebPort = "8080"
+	}
+
+	// figure out user SDK path, containing sdk_config.ini
+	// has to be done like this because wire-pod is running as root
+	// path should be /home/name/wire-pod/chipper
+	// Split puts an extra / in the beginning of the array
+	podPath, _ := os.Getwd()
+	podPathSplit := strings.Split(strings.TrimSpace(podPath), "/")
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		dir, _ := os.UserHomeDir()
+		SDKIniPath = dir + "/.anki_vector/"
+	} else if runtime.GOOS == "android" || runtime.GOOS == "ios" {
+		SDKIniPath = filepath.Join(AndroidPath, "/wire-pod/anki_vector")
+	} else {
+		if podPathSplit[len(podPathSplit)-1] != "chipper" || podPathSplit[len(podPathSplit)-2] != PodName {
+			logger.Println("It looks like you may have changed path names of the directories wire-pod is running in. This is not recommended because the SDK implementation depends on relativity in a few spots.")
+		}
+		if len(podPathSplit) >= 5 {
+			SDKIniPath = "/" + podPathSplit[1] + "/" + podPathSplit[2] + "/.anki_vector/"
+		} else if strings.EqualFold(podPathSplit[0], "root") {
+			SDKIniPath = "/root/.anki_vector/"
+		} else if len(podPathSplit) == 4 {
+			SDKIniPath = "/" + podPathSplit[1] + "/.anki_vector/"
+		} else {
+			logger.Println("Unsupported path scenario, printing podPathSplit: ")
+			logger.Println(podPathSplit)
+			SDKIniPath = "/tmp/.anki_vector/"
+		}
+	}
+	logger.Println("SDK info path: " + SDKIniPath)
+
+	// load api config (config.go)
+	ReadConfig()
+
+	// check models folder, add all models to DownloadedVoskModels
+	if APIConfig.STT.Service == "vosk" {
+		GetDownloadedVoskModels()
+	}
+
+	// load jdocs. if there are any in the old format, conver
+	if _, err := os.Stat(JdocsPath); err == nil {
+		jsonBytes, _ := os.ReadFile(JdocsPath)
+		json.Unmarshal(jsonBytes, &BotJdocs)
+		logger.Println("Loaded jdocs file")
+	}
+
+	// load bot sdk info
+	botBytes, err := os.ReadFile(BotInfoPath)
+	if err == nil {
+		json.Unmarshal(botBytes, &BotInfo)
+		var botList []string
+		for _, robot := range BotInfo.Robots {
+			botList = append(botList, robot.Esn)
+		}
+		logger.Println("Loaded bot info file, known bots: " + fmt.Sprint(botList))
+	}
+
+	ReadSessionCerts()
+	LoadCustomIntents()
+	VarsInited = true
+}
+
+func GetDownloadedVoskModels() {
+	array, err := os.ReadDir(VoskModelPath)
+	if err != nil {
+		logger.Println(err)
+		return
+	}
+	for _, dir := range array {
+		DownloadedVoskModels = append(DownloadedVoskModels, dir.Name())
+	}
+}
+
+func LoadCustomIntents() {
+	jsonBytes, err := os.ReadFile(CustomIntentsPath)
+	if err == nil {
+		json.Unmarshal(jsonBytes, &CustomIntents)
+		CustomIntentsExist = true
+		logger.Println("Loaded custom intents:")
+		for _, intent := range CustomIntents {
+			logger.Println(intent.Name)
+		}
+	}
+}
+
+func LoadIntents() ([]JsonIntent, error) {
+	var path string
+	if runtime.GOOS == "darwin" && Packaged {
+		appPath, _ := os.Executable()
+		path = filepath.Dir(appPath) + "/../Frameworks/chipper/"
+	} else if runtime.GOOS == "android" || runtime.GOOS == "ios" {
+		path = AndroidPath + "/static/"
+	} else {
+		path = "./"
+	}
+	jsonFile, err := os.ReadFile(path + "intent-data/" + APIConfig.STT.Language + ".json")
+
+	// var matches [][]string
+	// var intents []string
+	var jsonIntents []JsonIntent
+	if err == nil {
+		err = json.Unmarshal(jsonFile, &jsonIntents)
+		// if err != nil {
+		// 	logger.Println("Failed to load intents: " + err.Error())
+		// }
+
+		// for _, element := range jsonIntents {
+		// 	//logger.Println("Loading intent " + strconv.Itoa(index) + " --> " + element.Name + "( " + strconv.Itoa(len(element.Keyphrases)) + " keyphrases )")
+		// 	intents = append(intents, element.Name)
+		// 	matches = append(matches, element.Keyphrases)
+		// }
+		// logger.Println("Loaded " + strconv.Itoa(len(jsonIntents)) + " intents and " + strconv.Itoa(len(matches)) + " matches (language: " + APIConfig.STT.Language + ")")
+	}
+	return jsonIntents, err
+}
+
+func WriteJdocs() {
+	writeBytes, _ := json.Marshal(BotJdocs)
+	os.WriteFile(JdocsPath, writeBytes, 0644)
+}
+
+// removes a bot from jdocs file
+func DeleteData(thing string) {
+	var newdocs []botjdoc
+	for _, jdocentry := range BotJdocs {
+		if jdocentry.Thing != thing {
+			newdocs = append(newdocs, jdocentry)
+		}
+	}
+	BotJdocs = newdocs
+	WriteJdocs()
+}
+
+func GetJdoc(thing, jdocname string) (AJdoc, bool) {
+	for _, botJdoc := range BotJdocs {
+		if botJdoc.Name == jdocname && botJdoc.Thing == thing {
+			return botJdoc.Jdoc, true
+		}
+	}
+	return AJdoc{}, false
+}
+
+//    DocVersion     uint64 `protobuf:"varint,1,opt,name=doc_version,json=docVersion,proto3" json:"doc_version,omitempty"`            // first version = 1; 0 => invalid or doesn't exist
+// FmtVersion     uint64 `protobuf:"varint,2,opt,name=fmt_version,json=fmtVersion,proto3" json:"fmt_version,omitempty"`            // first version = 1; 0 => invalid
+// ClientMetadata string `protobuf:"bytes,3,opt,name=client_metadata,json=clientMetadata,proto3" json:"client_metadata,omitempty"` // arbitrary client-defined string, eg a data fingerprint (typ "", 32 chars max)
+// JsonDoc        string
+
+func AddJdoc(thing string, name string, jdoc AJdoc) uint64 {
+	var latestVersion uint64 = 0
+	matched := false
+	for index, jdocentry := range BotJdocs {
+		if jdocentry.Thing == thing && jdocentry.Name == name {
+			BotJdocs[index].Jdoc = jdoc
+			latestVersion = BotJdocs[index].Jdoc.DocVersion
+			matched = true
+			break
+		}
+	}
+	if !matched {
+		var newbot botjdoc
+		newbot.Thing = thing
+		newbot.Name = name
+		newbot.Jdoc = jdoc
+		BotJdocs = append(BotJdocs, newbot)
+	}
+	WriteJdocs()
+	return latestVersion
+}
+
+func ReadSessionCerts() {
+	logger.Println("Reading session certs for robot IDs")
+	var rinfo RecurringInfoStore
+	certDir, err := os.ReadDir(SessionCertPath)
+	if err != nil {
+		logger.Println(err)
+		return
+	}
+	for _, entry := range certDir {
+		if entry.Name() == "placeholder" {
+			continue
+		}
+		esn := entry.Name()
+		var ip string
+		certBytes, err := os.ReadFile(filepath.Join(SessionCertPath, entry.Name()))
+		if err != nil {
+			logger.Println(err)
+			return
+		}
+		pemBytes, _ := pem.Decode(certBytes)
+		cert, _ := x509.ParseCertificate(pemBytes.Bytes)
+		for _, robot := range BotInfo.Robots {
+			if esn == robot.Esn {
+				ip = robot.IPAddress
+				break
+			}
+		}
+		rinfo.ESN = esn
+		rinfo.ID = cert.Issuer.CommonName
+		rinfo.IP = ip
+		RecurringInfo = append(RecurringInfo, rinfo)
+	}
+}
+
+func AddToRInfo(esn string, id string, ip string) {
+	// the only bot constant is ESN
+	for i := range RecurringInfo {
+		if RecurringInfo[i].ESN == esn {
+			RecurringInfo[i].ID = id
+			RecurringInfo[i].IP = ip
+			return
+		}
+	}
+	var rinfo RecurringInfoStore
+	rinfo.ESN = esn
+	rinfo.ID = id
+	rinfo.IP = ip
+	RecurringInfo = append(RecurringInfo, rinfo)
+}
+
+func GetRobot(esn string) (*vector.Vector, error) {
+	var guid string
+	var target string
+	matched := false
+	for _, bot := range BotInfo.Robots {
+		if esn == bot.Esn {
+			guid = bot.GUID
+			target = bot.IPAddress + ":443"
+			matched = true
+			break
+		}
+	}
+	if !matched {
+		return nil, errors.New("robot not in botsdkinfo")
+	}
+	robot, err := vector.New(vector.WithSerialNo(esn), vector.WithToken(guid), vector.WithTarget(target))
+	if err != nil {
+		return nil, err
+	}
+	return robot, nil
+}
+
+func GetOutboundIP() net.IP {
+	if runtime.GOOS == "android" {
+		ifaces, _ := anet.Interfaces()
+		for _, iface := range ifaces {
+			if iface.Name == "wlan0" {
+				adrs, err := anet.InterfaceAddrsByInterface(&iface)
+				if err != nil {
+					logger.Println(err)
+					break
+				}
+				if len(adrs) > 0 {
+					localAddr := adrs[0].(*net.IPNet)
+					return localAddr.IP
+				}
+			}
+		}
+	}
+	conn, err := net.Dial("udp", OutboundIPTester)
+	if err != nil {
+		logger.Println("not connected to a network: ", err)
+		return net.IPv4(0, 0, 0, 0)
+	}
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP
+}
+
+/wire-pod/chipper/pkg/vtt/intent.go
+package vtt
+
+import (
+	"time"
+
+	pb "github.com/digital-dream-labs/api/go/chipperpb"
+)
+
+// IntentRequest is the necessary request type for VTT intent processors
+type IntentRequest struct {
+	Time       time.Time
+	Stream     pb.ChipperGrpc_StreamingIntentServer
+	Device     string
+	Session    string
+	LangString string
+	FirstReq   *pb.StreamingIntentRequest
+	AudioCodec pb.AudioEncoding
+}
+
+// IntentResponse is the response type VTT intent processors
+type IntentResponse struct {
+	Intent   *pb.IntentResponse
+	Params   string
+	Duration *time.Duration
+}
+
+/wire-pod/chipper/pkg/vtt/intentgraph.go
+package vtt
+
+import (
+	"time"
+
+	pb "github.com/digital-dream-labs/api/go/chipperpb"
+)
+
+// IntentGraphRequest is the necessary request type for VTT intent processors
+type IntentGraphRequest struct {
+	Time       time.Time
+	Stream     pb.ChipperGrpc_StreamingIntentGraphServer
+	Device     string
+	Session    string
+	LangString string
+	FirstReq   *pb.StreamingIntentGraphRequest
+	AudioCodec pb.AudioEncoding
+
+	// KnowledgeGraph specific
+	Mode pb.RobotMode
+}
+
+// IntentGraphResponse is the response type VTT intent processors
+type IntentGraphResponse struct {
+	Intent   *pb.IntentGraphResponse
+	Params   string
+	Duration *time.Duration
+}
+
+/wire-pod/chipper/pkg/vtt/knowledgegraph.go
+package vtt
+
+import (
+	"time"
+
+	pb "github.com/digital-dream-labs/api/go/chipperpb"
+)
+
+// KnowledgeGraphRequest is the necessary request type for VTT knowledge graph processors
+type KnowledgeGraphRequest struct {
+	Time       time.Time
+	Stream     pb.ChipperGrpc_StreamingKnowledgeGraphServer
+	Device     string
+	Session    string
+	LangString string
+	FirstReq   *pb.StreamingKnowledgeGraphRequest
+	Mode       pb.RobotMode
+	AudioCodec pb.AudioEncoding
+}
+
+// KnowledgeGraphResponse is the response type VTT knowledge graph processors
+type KnowledgeGraphResponse struct {
+	Intent   *pb.KnowledgeGraphResponse
+	Params   string
+	Duration *time.Duration
+}
