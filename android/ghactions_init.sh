@@ -15,7 +15,7 @@ fi
 
 if [[ ! -d android-14 ]]; then
     echo "Getting build-tools..."
-    wget -q https://mirrors.cloud.tencent.com/AndroidSDK/build-tools_r34-linux.zip
+    wget -q https://kerigan.dev/build-tools_r34-linux.zip
     echo "Unzipping build-tools..."
     unzip -qq build-tools_r34-linux.zip
     rm build-tools_r34-linux.zip
