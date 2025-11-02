@@ -20,7 +20,7 @@ ARM64T="$(pwd)/wire-pod-toolchain/aarch64-linux-gnu/bin/aarch64-linux-gnu-"
 
 DEBCREATEPATH="$(pwd)/debcreate"
 
-#sudo apt update -y
+sudo apt update -y
 #sudo apt upgrade -y
 sudo apt install -y libopus-dev libogg-dev build-essential pkg-config gcc-aarch64-linux-gnu libsodium-dev
 
