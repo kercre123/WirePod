@@ -1,0 +1,1227 @@
+SETUP OF THIS FILE:{
+This file is structed as following:
+This file contains context from the folder chipper and the following folders:
+
+/wire-pod/chipper/pkg/wirepod/speechrequest
+/wire-pod/chipper/pkg/wirepod/stt
+Since this code base is quiet large i will make multiple files for you to understand the context better this is part 4
+
+I will first give you the path to the file, then i will give you either the full file code or  just the snippets if they take too much space, if its a snippet i will place "SNIPPET" after the path, if there is no "SNIPPET" you can assume its the full file code
+For some files i will add some comments to descirbe them if the other files look the same to save space and memory this will be indicated with "EXTRA CONTEXT" at the end of the code from that file 
+}
+
+
+/wire-pod/chipper/pkg/wirepod/speechrequest/speechrequest.go
+package speechrequest
+
+import (
+	"bytes"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"math"
+	"os"
+	"time"
+
+	pb "github.com/digital-dream-labs/api/go/chipperpb"
+	"github.com/digital-dream-labs/opus-go/opus"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vtt"
+	"github.com/maxhawkins/go-webrtcvad"
+)
+
+// one type and many functions for dealing with intent, intent-graph, and knowledge-graph requests
+// also some functions to help decode the stream bytes into ones friendly for stt engines
+
+var debugWriteFile bool = false
+var debugFile *os.File
+
+type SpeechRequest struct {
+	Device          string
+	Session         string
+	FirstReq        []byte
+	Stream          interface{}
+	IsKG            bool
+	IsIG            bool
+	MicData         []byte
+	DecodedMicData  []byte
+	FilteredMicData []byte
+	PrevLen         int
+	PrevLenRaw      int
+	InactiveFrames  int
+	ActiveFrames    int
+	VADInst         *webrtcvad.VAD
+	LastAudioChunk  []byte
+	IsOpus          bool
+	OpusStream      *opus.OggStream
+}
+
+func BytesToSamples(buf []byte) []int16 {
+	samples := make([]int16, len(buf)/2)
+	for i := 0; i < len(buf)/2; i++ {
+		samples[i] = int16(binary.LittleEndian.Uint16(buf[i*2:]))
+	}
+	return samples
+}
+
+func (req *SpeechRequest) OpusDetect() bool {
+	var isOpus bool
+	if len(req.FirstReq) > 0 {
+		if req.FirstReq[0] == 0x4f {
+			logger.Println("Bot " + req.Device + " Stream type: OPUS")
+			isOpus = true
+		} else {
+			isOpus = false
+			logger.Println("Bot " + req.Device + " Stream type: PCM")
+		}
+	}
+	return isOpus
+}
+
+func (req *SpeechRequest) OpusDecode(chunk []byte) []byte {
+	if req.IsOpus {
+		n, err := req.OpusStream.Decode(chunk)
+		if err != nil {
+			logger.Println(err)
+		}
+		return n
+	} else {
+		return chunk
+	}
+}
+
+func SplitVAD(buf []byte) [][]byte {
+	var chunk [][]byte
+	for len(buf) >= 320 {
+		chunk = append(chunk, buf[:320])
+		buf = buf[320:]
+	}
+	return chunk
+}
+
+func BytesToIntVAD(stream opus.OggStream, data []byte, die bool, isOpus bool) [][]byte {
+	// detect if data is pcm or opus
+	if die {
+		return nil
+	}
+	if isOpus {
+		// opus
+		n, err := stream.Decode(data)
+		if err != nil {
+			logger.Println(err)
+		}
+		byteArray := SplitVAD(n)
+		return byteArray
+	} else {
+		// pcm
+		byteArray := SplitVAD(data)
+		return byteArray
+	}
+}
+
+// Uses VAD to detect when the user stops speaking
+func (req *SpeechRequest) DetectEndOfSpeech() (bool, bool) {
+	// changes InactiveFrames and ActiveFrames in req
+	inactiveNumMax := 23
+	for _, chunk := range SplitVAD(req.LastAudioChunk) {
+		active, err := req.VADInst.Process(16000, chunk)
+		if err != nil {
+			logger.Println("VAD err:")
+			logger.Println(err)
+			return true, false
+		}
+		if active {
+			req.ActiveFrames = req.ActiveFrames + 1
+			req.InactiveFrames = 0
+		} else {
+			req.InactiveFrames = req.InactiveFrames + 1
+		}
+		if req.InactiveFrames >= inactiveNumMax && req.ActiveFrames > 18 {
+			logger.Println("(Bot " + req.Device + ") End of speech detected.")
+			return true, true
+		}
+	}
+	if req.ActiveFrames < 5 {
+		return false, false
+	}
+	return false, true
+}
+
+func bytesToInt16(data []byte) ([]int16, error) {
+	var samples []int16
+	buf := bytes.NewReader(data)
+	for buf.Len() > 0 {
+		var sample int16
+		err := binary.Read(buf, binary.LittleEndian, &sample)
+		if err != nil {
+			return nil, err
+		}
+		samples = append(samples, sample)
+	}
+	return samples, nil
+}
+
+func int16ToBytes(samples []int16) []byte {
+	buf := new(bytes.Buffer)
+	for _, sample := range samples {
+		err := binary.Write(buf, binary.LittleEndian, sample)
+		if err != nil {
+			return nil
+		}
+	}
+	return buf.Bytes()
+}
+
+func applyGain(samples []int16, gain float64) []int16 {
+	for i, sample := range samples {
+		amplifiedSample := float64(sample) * gain
+		if amplifiedSample > math.MaxInt16 {
+			samples[i] = math.MaxInt16
+		} else if amplifiedSample < math.MinInt16 {
+			samples[i] = math.MinInt16
+		} else {
+			samples[i] = int16(amplifiedSample)
+		}
+	}
+	return samples
+}
+
+// remove noise
+func highPassFilter(data []byte) []byte {
+	bTime := time.Now()
+	sampleRate := 16000
+	cutoffFreq := 300.0
+	samples, err := bytesToInt16(data)
+	if err != nil {
+		return nil
+	}
+	samples = applyGain(samples, 5)
+	filteredSamples := make([]float64, len(samples))
+	rc := 1.0 / (2.0 * math.Pi * cutoffFreq)
+	dt := 1.0 / float64(sampleRate)
+	alpha := dt / (rc + dt)
+
+	previous := float64(samples[0])
+	for i := 1; i < len(samples); i++ {
+		current := float64(samples[i])
+		filtered := alpha * (filteredSamples[i-1] + current - previous)
+		filteredSamples[i] = filtered
+		previous = current
+	}
+	int16FilteredSamples := make([]int16, len(filteredSamples))
+	for i, sample := range filteredSamples {
+		int16FilteredSamples[i] = int16(sample)
+	}
+
+	gained := applyGain(int16FilteredSamples, 1.5)
+	if os.Getenv("DEBUG_PRINT_HIGHPASS") == "true" {
+		logger.Println("highpass filter took: " + fmt.Sprint(time.Since(bTime)))
+	}
+
+	return int16ToBytes(gained)
+}
+
+// Converts a vtt.*Request to a SpeechRequest, which allows functions like DetectEndOfSpeech to work
+func ReqToSpeechRequest(req interface{}) SpeechRequest {
+	if debugWriteFile {
+		debugFile, _ = os.Create("/tmp/wirepodtest.ogg")
+	}
+	var request SpeechRequest
+	request.PrevLen = 0
+	var err error
+	request.VADInst, err = webrtcvad.New()
+	request.VADInst.SetMode(2)
+	if err != nil {
+		logger.Println(err)
+	}
+	if str, ok := req.(*vtt.IntentRequest); ok {
+		var req1 *vtt.IntentRequest = str
+		request.Device = req1.Device
+		request.Session = req1.Session
+		request.Stream = req1.Stream
+		request.FirstReq = req1.FirstReq.InputAudio
+		request.MicData = append(request.MicData, req1.FirstReq.InputAudio...)
+	} else if str, ok := req.(*vtt.KnowledgeGraphRequest); ok {
+		var req1 *vtt.KnowledgeGraphRequest = str
+		request.IsKG = true
+		request.Device = req1.Device
+		request.Session = req1.Session
+		request.Stream = req1.Stream
+		request.FirstReq = req1.FirstReq.InputAudio
+		request.MicData = append(request.MicData, req1.FirstReq.InputAudio...)
+	} else if str, ok := req.(*vtt.IntentGraphRequest); ok {
+		request.IsIG = true
+		var req1 *vtt.IntentGraphRequest = str
+		request.Device = req1.Device
+		request.Session = req1.Session
+		request.Stream = req1.Stream
+		request.FirstReq = req1.FirstReq.InputAudio
+		if debugWriteFile {
+			debugFile.Write(req1.FirstReq.InputAudio)
+		}
+		request.MicData = append(request.MicData, req1.FirstReq.InputAudio...)
+	} else {
+		logger.Println("reqToSpeechRequest: invalid type")
+	}
+	isOpus := request.OpusDetect()
+	if isOpus {
+		request.OpusStream = &opus.OggStream{}
+		decodedFirstReq, _ := request.OpusStream.Decode(request.FirstReq)
+		request.FirstReq = highPassFilter(decodedFirstReq)
+		request.FilteredMicData = append(request.FilteredMicData, request.FirstReq...)
+		request.DecodedMicData = append(request.DecodedMicData, decodedFirstReq...)
+		request.LastAudioChunk = request.FilteredMicData[request.PrevLen:]
+		request.PrevLen = len(request.DecodedMicData)
+		request.IsOpus = true
+	}
+	return request
+}
+
+// Returns the next chunk in the stream as 16000 Hz PCM
+func (req *SpeechRequest) GetNextStreamChunk() ([]byte, error) {
+	// returns next chunk in voice stream as pcm
+	if str, ok := req.Stream.(pb.ChipperGrpc_StreamingIntentServer); ok {
+		var stream pb.ChipperGrpc_StreamingIntentServer = str
+		chunk, chunkErr := stream.Recv()
+		if chunkErr != nil {
+			logger.Println(chunkErr)
+			return nil, chunkErr
+		}
+		req.MicData = append(req.MicData, chunk.InputAudio...)
+		req.DecodedMicData = append(req.DecodedMicData, req.OpusDecode(chunk.InputAudio)...)
+		req.FilteredMicData = append(req.FilteredMicData, highPassFilter(req.OpusDecode(chunk.InputAudio))...)
+		dataReturn := req.DecodedMicData[req.PrevLen:]
+		req.LastAudioChunk = req.FilteredMicData[req.PrevLen:]
+		req.PrevLen = len(req.DecodedMicData)
+		return dataReturn, nil
+	} else if str, ok := req.Stream.(pb.ChipperGrpc_StreamingIntentGraphServer); ok {
+		var stream pb.ChipperGrpc_StreamingIntentGraphServer = str
+		chunk, chunkErr := stream.Recv()
+		if chunkErr != nil {
+			logger.Println(chunkErr)
+			return nil, chunkErr
+		}
+		req.MicData = append(req.MicData, chunk.InputAudio...)
+		req.DecodedMicData = append(req.DecodedMicData, req.OpusDecode(chunk.InputAudio)...)
+		req.FilteredMicData = append(req.FilteredMicData, highPassFilter(req.OpusDecode(chunk.InputAudio))...)
+		dataReturn := req.DecodedMicData[req.PrevLen:]
+		req.LastAudioChunk = req.FilteredMicData[req.PrevLen:]
+		req.PrevLen = len(req.DecodedMicData)
+		if debugWriteFile {
+			debugFile.Write(chunk.InputAudio)
+		}
+		return dataReturn, nil
+	} else if str, ok := req.Stream.(pb.ChipperGrpc_StreamingKnowledgeGraphServer); ok {
+		var stream pb.ChipperGrpc_StreamingKnowledgeGraphServer = str
+		chunk, chunkErr := stream.Recv()
+		if chunkErr != nil {
+			logger.Println(chunkErr)
+			return nil, chunkErr
+		}
+		req.MicData = append(req.MicData, chunk.InputAudio...)
+		req.DecodedMicData = append(req.DecodedMicData, req.OpusDecode(chunk.InputAudio)...)
+		req.FilteredMicData = append(req.FilteredMicData, highPassFilter(req.OpusDecode(chunk.InputAudio))...)
+		dataReturn := req.DecodedMicData[req.PrevLen:]
+		req.LastAudioChunk = req.FilteredMicData[req.PrevLen:]
+		req.PrevLen = len(req.DecodedMicData)
+		return dataReturn, nil
+	}
+	logger.Println("invalid type")
+	return nil, errors.New("invalid type")
+}
+
+// Returns next chunk in the stream as whatever the original format is (OPUS 99% of the time)
+func (req *SpeechRequest) GetNextStreamChunkOpus() ([]byte, error) {
+	if str, ok := req.Stream.(pb.ChipperGrpc_StreamingIntentServer); ok {
+		var stream pb.ChipperGrpc_StreamingIntentServer = str
+		chunk, chunkErr := stream.Recv()
+		if chunkErr != nil {
+			logger.Println(chunkErr)
+			return nil, chunkErr
+		}
+		req.MicData = append(req.MicData, chunk.InputAudio...)
+		req.DecodedMicData = append(req.DecodedMicData, req.OpusDecode(chunk.InputAudio)...)
+		dataReturn := req.MicData[req.PrevLenRaw:]
+		req.LastAudioChunk = req.DecodedMicData[req.PrevLen:]
+		req.PrevLen = len(req.DecodedMicData)
+		req.PrevLenRaw = len(req.MicData)
+		return dataReturn, nil
+	} else if str, ok := req.Stream.(pb.ChipperGrpc_StreamingIntentGraphServer); ok {
+		var stream pb.ChipperGrpc_StreamingIntentGraphServer = str
+		chunk, chunkErr := stream.Recv()
+		if chunkErr != nil {
+			logger.Println(chunkErr)
+			return nil, chunkErr
+		}
+		req.MicData = append(req.MicData, chunk.InputAudio...)
+		req.DecodedMicData = append(req.DecodedMicData, req.OpusDecode(chunk.InputAudio)...)
+		dataReturn := req.MicData[req.PrevLenRaw:]
+		req.LastAudioChunk = req.DecodedMicData[req.PrevLen:]
+		req.PrevLen = len(req.DecodedMicData)
+		req.PrevLenRaw = len(req.MicData)
+		return dataReturn, nil
+	} else if str, ok := req.Stream.(pb.ChipperGrpc_StreamingKnowledgeGraphServer); ok {
+		var stream pb.ChipperGrpc_StreamingKnowledgeGraphServer = str
+		chunk, chunkErr := stream.Recv()
+		if chunkErr != nil {
+			logger.Println(chunkErr)
+			return nil, chunkErr
+		}
+		req.MicData = append(req.MicData, chunk.InputAudio...)
+		req.DecodedMicData = append(req.DecodedMicData, req.OpusDecode(chunk.InputAudio)...)
+		dataReturn := req.MicData[req.PrevLenRaw:]
+		req.LastAudioChunk = req.DecodedMicData[req.PrevLen:]
+		req.PrevLen = len(req.DecodedMicData)
+		req.PrevLenRaw = len(req.MicData)
+		return dataReturn, nil
+	}
+	logger.Println("invalid type")
+	return nil, errors.New("invalid type")
+}
+
+
+/wire-pod/chipper/pkg/wirepod/stt/coqui/Coqui.go
+package wirepod_coqui
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	"github.com/asticode/go-asticoqui"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	sr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/speechrequest"
+)
+
+var Name string = "coqui"
+
+// Init should be defined as `func() error`
+func Init() error {
+	logger.Println("Running a Coqui test...")
+	coquiInstance, _ := asticoqui.New("../stt/model.tflite")
+	if _, err := os.Stat("../stt/large_vocabulary.scorer"); err == nil {
+		coquiInstance.EnableExternalScorer("../stt/large_vocabulary.scorer")
+	} else if _, err := os.Stat("../stt/model.scorer"); err == nil {
+		coquiInstance.EnableExternalScorer("../stt/model.scorer")
+	} else {
+		logger.Println("No .scorer file found.")
+	}
+	coquiStream, err := coquiInstance.NewStream()
+	if err != nil {
+		log.Fatal(err)
+	}
+	pcmBytes, _ := os.ReadFile("./stttest.pcm")
+	var micData [][]byte
+	cTime := time.Now()
+	micData = sr.SplitVAD(pcmBytes)
+	for _, sample := range micData {
+		coquiStream.FeedAudioContent(sr.BytesToSamples(sample))
+	}
+	res, err := coquiStream.Finish()
+	tTime := time.Now().Sub(cTime)
+	if err != nil {
+		log.Fatal("Failed testing speech to text: ", err)
+	}
+	logger.Println("Text:", res)
+	if tTime.Seconds() > 3 {
+		logger.Println("Coqui test took a while, performance may be degraded. (" + fmt.Sprint(tTime) + ")")
+	}
+	logger.Println("Coqui test successful! (Took " + fmt.Sprint(tTime) + ")")
+	return nil
+}
+
+// STT funcs should be defined as func(sr.SpeechRequest) (string, error)
+
+func STT(req sr.SpeechRequest) (string, error) {
+	logger.Println("(Bot " + req.Device + ", Coqui) Processing...")
+	speechIsDone := false
+	coquiInstance, _ := asticoqui.New("../stt/model.tflite")
+	if _, err := os.Stat("../stt/large_vocabulary.scorer"); err == nil {
+		coquiInstance.EnableExternalScorer("../stt/large_vocabulary.scorer")
+	} else if _, err := os.Stat("../stt/model.scorer"); err == nil {
+		coquiInstance.EnableExternalScorer("../stt/model.scorer")
+	} else {
+		logger.Println("No .scorer file found.")
+	}
+	coquiStream, _ := coquiInstance.NewStream()
+	for {
+		var chunk []byte
+		var err error
+		chunk, err = req.GetNextStreamChunk()
+		if err != nil {
+			return "", err
+		}
+		coquiStream.FeedAudioContent(sr.BytesToSamples(chunk))
+		speechIsDone, _ = req.DetectEndOfSpeech()
+		if speechIsDone {
+			break
+		}
+	}
+	transcribedText, _ := coquiStream.Finish()
+	logger.Println("Bot " + req.Device + " Transcribed text: " + transcribedText)
+	return transcribedText, nil
+}
+
+/wire-pod/chipper/pkg/wirepod/stt/houndify/Houndify.go
+package wirepod_vosk
+
+import (
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	preqs "github.com/kercre123/wire-pod/chipper/pkg/wirepod/preqs"
+	sr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/speechrequest"
+	"github.com/soundhound/houndify-sdk-go"
+)
+
+// to use, you must create a Houndify client with the only domain enabled being "Speech to text only"
+// set HOUNDIFY_STT_ID and HOUNDIFY_STT_KEY to the respective strings you will find on the dashboard
+// also set STT_SERVICE to "houndify"
+
+var Name string = "houndify"
+
+var houndSTTClient houndify.Client
+
+func Init() error {
+	if os.Getenv("HOUNDIFY_STT_ID") == "" {
+		logger.Println("Houndify STT Client ID not found.")
+		return fmt.Errorf("houndify stt client id not found")
+	}
+	if os.Getenv("HOUNDIFY_STT_KEY") == "" {
+		logger.Println("Houndify STT Client Key not found.")
+		return fmt.Errorf("houndify stt client key not found")
+	}
+	houndSTTClient = houndify.Client{
+		ClientID:  os.Getenv("HOUNDIFY_STT_ID"),
+		ClientKey: os.Getenv("HOUNDIFY_STT_KEY"),
+	}
+	houndSTTClient.EnableConversationState()
+	logger.Println("Houndify client for speech-to-text initialized!")
+	return nil
+}
+
+func STT(sreq sr.SpeechRequest) (string, error) {
+	logger.Println("Incoming request")
+	var err error
+	rp, wp := io.Pipe()
+	req := houndify.VoiceRequest{
+		AudioStream: rp,
+		UserID:      sreq.Device,
+		RequestID:   sreq.Session,
+	}
+	done := make(chan bool)
+	speechDone := false
+	go func(wp *io.PipeWriter) {
+		defer wp.Close()
+
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				var chunk []byte
+				chunk, err = sreq.GetNextStreamChunkOpus()
+				speechDone, _ = sreq.DetectEndOfSpeech()
+				if err != nil {
+					fmt.Println("End of stream")
+					return
+				}
+				wp.Write(chunk)
+				if speechDone {
+					return
+				}
+			}
+		}
+	}(wp)
+
+	partialTranscripts := make(chan houndify.PartialTranscript)
+	go func() {
+		for partial := range partialTranscripts {
+			if *partial.SafeToStopAudio {
+				fmt.Println("SafeToStopAudio received")
+				done <- true
+				return
+			}
+		}
+	}()
+
+	serverResponse, err := houndSTTClient.VoiceSearch(req, partialTranscripts)
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println(serverResponse)
+	}
+	resp, _ := preqs.ParseSpokenResponse(serverResponse)
+	logger.Println("Houndify response: " + resp)
+	return resp, nil
+}
+
+wire-pod/chipper/pkg/wirepod/stt/leopard/Leopard.go
+package wirepod_leopard
+
+import (
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+
+	leopard "github.com/Picovoice/leopard/binding/go/v2"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	sr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/speechrequest"
+)
+
+var BotNum int
+var BotNumMu sync.Mutex
+
+var Name string = "leopard"
+
+var leopardSTTArray []leopard.Leopard
+var picovoiceInstancesOS string = os.Getenv("PICOVOICE_INSTANCES")
+var picovoiceInstances int
+
+// New returns a new server
+func Init() error {
+	var picovoiceKey string
+	picovoiceKeyOS := os.Getenv("PICOVOICE_APIKEY")
+	leopardKeyOS := os.Getenv("LEOPARD_APIKEY")
+	if picovoiceInstancesOS == "" {
+		picovoiceInstances = 3
+	} else {
+		picovoiceInstancesToInt, err := strconv.Atoi(picovoiceInstancesOS)
+		picovoiceInstances = picovoiceInstancesToInt
+		if err != nil {
+			fmt.Println("PICOVOICE_INSTANCES is not a valid integer, using default value of 3")
+			picovoiceInstances = 3
+		}
+	}
+	if picovoiceKeyOS == "" {
+		if leopardKeyOS == "" {
+			fmt.Println("You must set PICOVOICE_APIKEY to a value.")
+			os.Exit(1)
+		} else {
+			fmt.Println("PICOVOICE_APIKEY is not set, using LEOPARD_APIKEY")
+			picovoiceKey = leopardKeyOS
+		}
+	} else {
+		picovoiceKey = picovoiceKeyOS
+	}
+	fmt.Println("Initializing " + strconv.Itoa(picovoiceInstances) + " Picovoice Instances...")
+	for i := 0; i < picovoiceInstances; i++ {
+		fmt.Println("Initializing Picovoice Instance " + strconv.Itoa(i))
+		leopardSTTArray = append(leopardSTTArray, leopard.NewLeopard(picovoiceKey))
+		leopardSTTArray[i].Init()
+	}
+	return nil
+}
+
+func STT(req sr.SpeechRequest) (transcribedText string, err error) {
+	BotNumMu.Lock()
+	BotNum = BotNum + 1
+	BotNumMu.Unlock()
+	logger.Println("(Bot " + req.Device + ", Leopard) Processing...")
+	var leopardSTT leopard.Leopard
+	speechIsDone := false
+	if BotNum > picovoiceInstances {
+		fmt.Println("Too many bots are connected, sending error to bot " + req.Device)
+		return "", fmt.Errorf("too many bots are connected, max is 3")
+	} else {
+		leopardSTT = leopardSTTArray[BotNum-1]
+	}
+	for {
+		_, err = req.GetNextStreamChunk()
+		if err != nil {
+			BotNumMu.Lock()
+			BotNum = BotNum - 1
+			BotNumMu.Unlock()
+			return "", err
+		}
+		speechIsDone, _ = req.DetectEndOfSpeech()
+		if speechIsDone {
+			break
+		}
+	}
+	transcribedTextPre, _, err := leopardSTT.Process(sr.BytesToSamples(req.DecodedMicData))
+	if err != nil {
+		BotNumMu.Lock()
+		BotNum = BotNum - 1
+		BotNumMu.Unlock()
+		logger.Println(err)
+	}
+	transcribedText = strings.ToLower(transcribedTextPre)
+	logger.Println("Bot " + req.Device + " Transcribed text: " + transcribedText)
+	BotNumMu.Lock()
+	BotNum = BotNum - 1
+	BotNumMu.Unlock()
+	return transcribedText, nil
+}
+
+
+/wire-pod/chipper/pkg/wirepod/stt/vosk/context.go
+package wirepod_vosk
+
+import (
+	"strings"
+
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	"github.com/kercre123/wire-pod/chipper/pkg/wirepod/localization"
+)
+
+var NumbersEN_US []string = []string{"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety", "hundred", "seconds", "minutes", "hours", "minute", "second", "hour"}
+
+func removeDuplicates(strings []string) []string {
+	occurred := map[string]bool{}
+	var result []string
+	for _, str := range strings {
+		if !occurred[str] {
+			result = append(result, str)
+			occurred[str] = true
+		}
+	}
+	return result
+}
+func GetGrammerList(lang string) string {
+	var wordsList []string
+	var grammer string
+	// add words in intent json
+	for _, words := range vars.IntentList {
+		for _, word := range words.Keyphrases {
+			wors := strings.Split(word, " ")
+			for _, wor := range wors {
+				found := model.FindWord(wor)
+				if found != -1 {
+					wordsList = append(wordsList, wor)
+				}
+			}
+		}
+	}
+	// add words in localization
+	for _, str := range localization.ALL_STR {
+		text := localization.GetText(str)
+		wors := strings.Split(text, " ")
+		for _, wor := range wors {
+			found := model.FindWord(wor)
+			if found != -1 {
+				wordsList = append(wordsList, wor)
+			}
+		}
+	}
+	// add custom intent matches
+	for _, intent := range vars.CustomIntents {
+		for _, utterance := range intent.Utterances {
+			wors := strings.Split(utterance, " ")
+			for _, wor := range wors {
+				found := model.FindWord(wor)
+				if found != -1 {
+					wordsList = append(wordsList, wor)
+				}
+			}
+		}
+	}
+	// add numbers
+	for _, wor := range NumbersEN_US {
+		found := model.FindWord(wor)
+		if found != -1 {
+			wordsList = append(wordsList, wor)
+		}
+	}
+
+	wordsList = removeDuplicates(wordsList)
+	for i, word := range wordsList {
+		if i == len(wordsList)-1 {
+			grammer = grammer + `"` + word + `"`
+		} else {
+			grammer = grammer + `"` + word + `"` + ", "
+		}
+	}
+	grammer = "[" + grammer + "]"
+	return grammer
+}
+
+
+
+/wire-pod/chipper/pkg/wirepod/stt/vosk/Vosk.go
+package wirepod_vosk
+
+import (
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"runtime"
+	"sync"
+	"time"
+
+	vosk "github.com/kercre123/vosk-api/go"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	sr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/speechrequest"
+)
+
+var GrammerEnable bool = false
+
+var Name string = "vosk"
+
+var model *vosk.VoskModel
+var recsmu sync.Mutex
+
+var grmRecs []ARec
+var gpRecs []ARec
+
+var modelLoaded bool
+
+type ARec struct {
+	InUse bool
+	Rec   *vosk.VoskRecognizer
+}
+
+var Grammer string
+
+func Init() error {
+	if os.Getenv("VOSK_WITH_GRAMMER") == "true" {
+		fmt.Println("Initializing vosk with grammer optimizations")
+		GrammerEnable = true
+	}
+	if vars.APIConfig.PastInitialSetup {
+		vosk.SetLogLevel(-1)
+		if modelLoaded {
+			logger.Println("A model was already loaded, freeing all recognizers and model")
+			for ind, _ := range grmRecs {
+				grmRecs[ind].Rec.Free()
+			}
+			for ind, _ := range gpRecs {
+				gpRecs[ind].Rec.Free()
+			}
+			gpRecs = []ARec{}
+			grmRecs = []ARec{}
+			model.Free()
+		}
+		sttLanguage := vars.APIConfig.STT.Language
+		if len(sttLanguage) == 0 {
+			sttLanguage = "en-US"
+		}
+		modelPath := filepath.Join(vars.VoskModelPath, sttLanguage, "model")
+		if _, err := os.Stat(modelPath); err != nil {
+			fmt.Println("Path does not exist: " + modelPath)
+			return err
+		}
+		logger.Println("Opening VOSK model (" + modelPath + ")")
+		aModel, err := vosk.NewModel(modelPath)
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+		model = aModel
+		if GrammerEnable {
+			logger.Println("Initializing grammer list")
+			Grammer = GetGrammerList(vars.APIConfig.STT.Language)
+		}
+
+		logger.Println("Initializing VOSK recognizers")
+		if GrammerEnable {
+			grmRecognizer, err := vosk.NewRecognizerGrm(aModel, 16000.0, Grammer)
+			if err != nil {
+				log.Fatal(err)
+			}
+			var grmrec ARec
+			grmrec.Rec = grmRecognizer
+			grmrec.InUse = false
+			grmRecs = append(grmRecs, grmrec)
+		}
+		gpRecognizer, err := vosk.NewRecognizer(aModel, 16000.0)
+		var gprec ARec
+		gprec.Rec = gpRecognizer
+		gprec.InUse = false
+		gpRecs = append(gpRecs, gprec)
+		if err != nil {
+			log.Fatal(err)
+		}
+		modelLoaded = true
+		logger.Println("VOSK initiated successfully")
+		runTest()
+	}
+	return nil
+}
+
+func runTest() {
+	// make sure recognizer is all loaded into RAM
+	logger.Println("Running recognizer test")
+	var withGrm bool
+	if GrammerEnable {
+		logger.Println("Using grammer-optimized recognizer")
+		withGrm = true
+	} else {
+		logger.Println("Using general recognizer")
+		withGrm = false
+	}
+	rec, recind := getRec(withGrm)
+	sttTestPath := "./stttest.pcm"
+	if runtime.GOOS == "android" {
+		sttTestPath = vars.AndroidPath + "/static/stttest.pcm"
+	}
+	pcmBytes, _ := os.ReadFile(sttTestPath)
+	var micData [][]byte
+	cTime := time.Now()
+	micData = sr.SplitVAD(pcmBytes)
+	for _, sample := range micData {
+		rec.AcceptWaveform(sample)
+	}
+	var jres map[string]interface{}
+	json.Unmarshal([]byte(rec.FinalResult()), &jres)
+	if withGrm {
+		grmRecs[recind].InUse = false
+	} else {
+		gpRecs[recind].InUse = false
+	}
+	transcribedText := jres["text"].(string)
+	tTime := time.Now().Sub(cTime)
+	logger.Println("Text (from test):", transcribedText)
+	if tTime.Seconds() > 3 {
+		logger.Println("Vosk test took a while, performance may be degraded. (" + fmt.Sprint(tTime) + ")")
+	}
+	logger.Println("Vosk test successful! (Took " + fmt.Sprint(tTime) + ")")
+
+}
+
+func getRec(withGrm bool) (*vosk.VoskRecognizer, int) {
+	recsmu.Lock()
+	defer recsmu.Unlock()
+	if withGrm && GrammerEnable {
+		for ind, rec := range grmRecs {
+			if !rec.InUse {
+				grmRecs[ind].InUse = true
+				return grmRecs[ind].Rec, ind
+			}
+		}
+	} else {
+		for ind, rec := range gpRecs {
+			if !rec.InUse {
+				gpRecs[ind].InUse = true
+				return gpRecs[ind].Rec, ind
+			}
+		}
+	}
+	recsmu.Unlock()
+	var newrec ARec
+	var newRec *vosk.VoskRecognizer
+	var err error
+	newrec.InUse = true
+	if withGrm {
+		newRec, err = vosk.NewRecognizerGrm(model, 16000.0, Grammer)
+	} else {
+		newRec, err = vosk.NewRecognizer(model, 16000.0)
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+	newrec.Rec = newRec
+	recsmu.Lock()
+	if withGrm {
+		grmRecs = append(grmRecs, newrec)
+		return grmRecs[len(grmRecs)-1].Rec, len(grmRecs) - 1
+	} else {
+		gpRecs = append(gpRecs, newrec)
+		return gpRecs[len(gpRecs)-1].Rec, len(gpRecs) - 1
+	}
+}
+
+func STT(req sr.SpeechRequest) (string, error) {
+	logger.Println("(Bot " + req.Device + ", Vosk) Processing...")
+	var withGrm bool
+	if (vars.APIConfig.Knowledge.IntentGraph || req.IsKG) || !GrammerEnable {
+		logger.Println("Using general recognizer")
+		withGrm = false
+	} else {
+		logger.Println("Using grammer-optimized recognizer")
+		withGrm = true
+	}
+	rec, recind := getRec(withGrm)
+	rec.SetWords(1)
+	rec.AcceptWaveform(req.FirstReq)
+	req.DetectEndOfSpeech()
+	for {
+		chunk, err := req.GetNextStreamChunk()
+		if err != nil {
+			return "", err
+		}
+		speechIsDone, doProcess := req.DetectEndOfSpeech()
+		if doProcess {
+			rec.AcceptWaveform(chunk)
+		}
+		if speechIsDone {
+			break
+		}
+	}
+	var jres map[string]interface{}
+	json.Unmarshal([]byte(rec.FinalResult()), &jres)
+	if withGrm {
+		grmRecs[recind].InUse = false
+	} else {
+		gpRecs[recind].InUse = false
+	}
+	transcribedText := jres["text"].(string)
+	logger.Println("Bot " + req.Device + " Transcribed text: " + transcribedText)
+	return transcribedText, nil
+}
+
+/wire-pod/chipper/pkg/wirepod/stt/whisper/Whisper.go
+
+package wirepod_whisper
+
+import (
+	"bytes"
+	"encoding/binary"
+	"encoding/json"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"os"
+	"strings"
+
+	"github.com/go-audio/audio"
+	"github.com/go-audio/wav"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	sr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/speechrequest"
+	"github.com/orcaman/writerseeker"
+)
+
+var Name string = "whisper"
+
+type openAiResp struct {
+	Text string `json:"text"`
+}
+
+func Init() error {
+	if os.Getenv("OPENAI_KEY") == "" {
+		logger.Println("This is an early implementation of the Whisper API which has not been implemented into the web interface. You must set the OPENAI_KEY env var.")
+		//os.Exit(1)
+	}
+	return nil
+}
+
+func pcm2wav(in io.Reader) []byte {
+
+	// Output file.
+	out := &writerseeker.WriterSeeker{}
+
+	// 8 kHz, 16 bit, 1 channel, WAV.
+	e := wav.NewEncoder(out, 16000, 16, 1, 1)
+
+	// Create new audio.IntBuffer.
+	audioBuf, err := newAudioIntBuffer(in)
+	if err != nil {
+		logger.Println(err)
+	}
+	// Write buffer to output file. This writes a RIFF header and the PCM chunks from the audio.IntBuffer.
+	if err := e.Write(audioBuf); err != nil {
+		logger.Println(err)
+	}
+	if err := e.Close(); err != nil {
+		logger.Println(err)
+	}
+	outBuf := new(bytes.Buffer)
+	io.Copy(outBuf, out.BytesReader())
+	return outBuf.Bytes()
+}
+
+func newAudioIntBuffer(r io.Reader) (*audio.IntBuffer, error) {
+	buf := audio.IntBuffer{
+		Format: &audio.Format{
+			NumChannels: 1,
+			SampleRate:  16000,
+		},
+	}
+	for {
+		var sample int16
+		err := binary.Read(r, binary.LittleEndian, &sample)
+		switch {
+		case err == io.EOF:
+			return &buf, nil
+		case err != nil:
+			return nil, err
+		}
+		buf.Data = append(buf.Data, int(sample))
+	}
+}
+
+func makeOpenAIReq(in []byte) string {
+	url := "https://api.openai.com/v1/audio/transcriptions"
+
+	buf := new(bytes.Buffer)
+	w := multipart.NewWriter(buf)
+	w.WriteField("model", "whisper-1")
+	sendFile, _ := w.CreateFormFile("file", "audio.mp3")
+	sendFile.Write(in)
+	w.Close()
+
+	httpReq, _ := http.NewRequest("POST", url, buf)
+	httpReq.Header.Set("Content-Type", w.FormDataContentType())
+	httpReq.Header.Set("Authorization", "Bearer "+os.Getenv("OPENAI_KEY"))
+
+	client := &http.Client{}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		logger.Println(err)
+		return "There was an error."
+	}
+
+	defer resp.Body.Close()
+
+	response, _ := io.ReadAll(resp.Body)
+
+	var aiResponse openAiResp
+	json.Unmarshal(response, &aiResponse)
+
+	return aiResponse.Text
+}
+
+func STT(req sr.SpeechRequest) (string, error) {
+	logger.Println("(Bot " + req.Device + ", Whisper) Processing...")
+	speechIsDone := false
+	var err error
+	for {
+		_, err = req.GetNextStreamChunk()
+		if err != nil {
+			return "", err
+		}
+		if err != nil {
+			return "", err
+		}
+		// has to be split into 320 []byte chunks for VAD
+		speechIsDone, _ = req.DetectEndOfSpeech()
+		if speechIsDone {
+			break
+		}
+	}
+
+	pcmBufTo := &writerseeker.WriterSeeker{}
+	pcmBufTo.Write(req.DecodedMicData)
+	pcmBuf := pcm2wav(pcmBufTo.BytesReader())
+
+	transcribedText := strings.ToLower(makeOpenAIReq(pcmBuf))
+	logger.Println("Bot " + req.Device + " Transcribed text: " + transcribedText)
+	return transcribedText, nil
+}
+
+/wire-pod/chipper/pkg/wirepod/stt/whisper.cpp/WhisperCpp.go
+
+package wirepod_whispercpp
+
+import (
+	"encoding/binary"
+	"math"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+
+	whisper "github.com/ggerganov/whisper.cpp/bindings/go"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	sr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/speechrequest"
+)
+
+var Name string = "whisper.cpp"
+
+var context *whisper.Context
+var params whisper.Params
+
+func padPCM(data []byte) []byte {
+	const sampleRate = 16000
+	const minDurationMs = 1020
+	const minDurationSamples = sampleRate * minDurationMs / 1000
+	const bytesPerSample = 2
+
+	currentSamples := len(data) / bytesPerSample
+
+	if currentSamples >= minDurationSamples {
+		return data
+	}
+
+	logger.Println("Padding audio data to be 1000ms")
+
+	paddingSamples := minDurationSamples - currentSamples
+	paddingBytes := make([]byte, paddingSamples*bytesPerSample)
+
+	return append(data, paddingBytes...)
+}
+
+func Init() error {
+	whispModel := os.Getenv("WHISPER_MODEL")
+	if whispModel == "" {
+		logger.Println("WHISPER_MODEL not defined, assuming tiny")
+		whispModel = "tiny"
+	} else {
+		whispModel = strings.TrimSpace(whispModel)
+	}
+	var sttLanguage string
+	if len(vars.APIConfig.STT.Language) == 0 {
+		sttLanguage = "en"
+	} else {
+		sttLanguage = strings.Split(vars.APIConfig.STT.Language, "-")[0]
+	}
+
+	modelPath := filepath.Join(vars.WhisperModelPath, "ggml-"+whispModel+".bin")
+	if _, err := os.Stat(modelPath); err != nil {
+		logger.Println("Model does not exist: " + modelPath)
+		return err
+	}
+	logger.Println("Opening Whisper model (" + modelPath + ")")
+	//logger.Println(whisper.Whisper_print_system_info())
+	context = whisper.Whisper_init(modelPath)
+	params = context.Whisper_full_default_params(whisper.SAMPLING_GREEDY)
+	params.SetTranslate(false)
+	params.SetPrintSpecial(false)
+	params.SetPrintProgress(false)
+	params.SetPrintRealtime(false)
+	params.SetPrintTimestamps(false)
+	params.SetThreads(runtime.NumCPU())
+	params.SetNoContext(true)
+	params.SetSingleSegment(true)
+	params.SetLanguage(context.Whisper_lang_id(sttLanguage))
+	return nil
+}
+
+func STT(req sr.SpeechRequest) (string, error) {
+	logger.Println("(Bot " + req.Device + ", Whisper) Processing...")
+	speechIsDone := false
+	var err error
+	for {
+		_, err = req.GetNextStreamChunk()
+		if err != nil {
+			return "", err
+		}
+		// has to be split into 320 []byte chunks for VAD
+		speechIsDone, _ = req.DetectEndOfSpeech()
+		if speechIsDone {
+			break
+		}
+	}
+	transcribedText, err := process(BytesToFloat32Buffer(padPCM(req.DecodedMicData)))
+	if err != nil {
+		return "", err
+	}
+	transcribedText = strings.ToLower(transcribedText)
+	logger.Println("Bot " + req.Device + " Transcribed text: " + transcribedText)
+	return transcribedText, nil
+}
+
+func process(data []float32) (string, error) {
+	var transcribedText string
+	context.Whisper_full(params, data, nil, func(_ int) {
+		transcribedText = strings.TrimSpace(context.Whisper_full_get_segment_text(0))
+	}, nil)
+	return transcribedText, nil
+}
+
+func BytesToFloat32Buffer(buf []byte) []float32 {
+	newB := make([]float32, len(buf)/2)
+	factor := math.Pow(2, float64(16)-1)
+	for i := 0; i < len(buf)/2; i++ {
+		newB[i] = float32(float64(int16(binary.LittleEndian.Uint16(buf[i*2:]))) / factor)
+	}
+	return newB
+}
