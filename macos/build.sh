@@ -163,6 +163,9 @@ EOF
     -change libvosk.dylib \
     @executable_path/../Frameworks/libvosk.dylib \
     ${APPDIR}/MacOS/WirePod
+
+    # Bind Info.plist (NSLocalNetworkUsageDescription etc.) to the app's code identity
+    codesign --force --deep --sign - target/WirePod.app
 }
 
 function buildDmg() {
