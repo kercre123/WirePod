@@ -98,31 +98,39 @@ function buildApp() {
     sudo lipo -create ${PODLIBS}/opus/arm64/lib/libopus.0.dylib ${PODLIBS}/opus/amd64/lib/libopus.0.dylib -output ${PODLIBS}/opus/libopus.0.dylib
     sudo lipo -create tmp/WirePod-arm64 tmp/WirePod-amd64 -output ${MACOS}/WirePod
 
-    echo "<?xml version="1.0" encoding="UTF-8"?>" > $PLISTFILE
-    echo "<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">" >> $PLISTFILE
-    echo "<plist version="1.0">" >> $PLISTFILE
-    echo "<dict>" >> $PLISTFILE
-    echo "  <key>CFBundleGetInfoString</key>" >> $PLISTFILE
-    echo "  <string>WirePod</string>" >> $PLISTFILE
-    echo "  <key>CFBundleExecutable</key>" >> $PLISTFILE
-    echo "  <string>WirePod</string>" >> $PLISTFILE
-    echo "  <key>CFBundleIdentifier</key>" >> $PLISTFILE
-    echo "  <string>io.github.kercre123</string>" >> $PLISTFILE
-    echo "  <key>CFBundleName</key>" >> $PLISTFILE
-    echo "  <string>WirePod</string>" >> $PLISTFILE
-    echo "  <key>CFBundleIconFile</key>" >> $PLISTFILE
-    echo "  <string>icon.icns</string>" >> $PLISTFILE
-    echo "  <key>CFBundleVersion</key>" >> $PLISTFILE
-    echo "  <string>$PODVER</string>" >> $PLISTFILE
-    echo "  <key>CFBundleInfoDictionaryVersion</key>" >> $PLISTFILE
-    echo "  <string>6.0</string>" >> $PLISTFILE
-    echo "  <key>CFBundlePackageType</key>" >> $PLISTFILE
-    echo "  <string>APPL</string>" >> $PLISTFILE
-    echo "  <key>NSHighResolutionCapable</key><true/>" >> $PLISTFILE
-    echo "  <key>NSSupportsAutomaticGraphicsSwitching</key><true/>" >> $PLISTFILE
-    echo "  <key>LSUIElement</key><true/>" >> $PLISTFILE
-    echo "</dict>" >> $PLISTFILE
-    echo "</plist>" >> $PLISTFILE
+    cat > $PLISTFILE <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleGetInfoString</key>
+  <string>WirePod</string>
+  <key>CFBundleExecutable</key>
+  <string>WirePod</string>
+  <key>CFBundleIdentifier</key>
+  <string>io.github.kercre123</string>
+  <key>CFBundleName</key>
+  <string>WirePod</string>
+  <key>CFBundleIconFile</key>
+  <string>icon.icns</string>
+  <key>CFBundleVersion</key>
+  <string>${PODVER}</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSSupportsAutomaticGraphicsSwitching</key><true/>
+  <key>LSUIElement</key><true/>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>WirePod needs to connect to your Vector robot on your local network.</string>
+  <key>NSBonjourServices</key>
+  <array>
+    <string>_app-proto._tcp</string>
+  </array>
+</dict>
+</plist>
+EOF
 
     export CHPATH="../wire-pod/chipper"
     export CLPATH="../wire-pod/vector-cloud"
@@ -155,6 +163,9 @@ function buildApp() {
     -change libvosk.dylib \
     @executable_path/../Frameworks/libvosk.dylib \
     ${APPDIR}/MacOS/WirePod
+
+    # Bind Info.plist (NSLocalNetworkUsageDescription etc.) to the app's code identity
+    codesign --force --deep --sign - target/WirePod.app
 }
 
 function buildDmg() {
