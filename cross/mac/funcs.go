@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	all "github.com/kercre123/WirePod/cross/all"
 	"github.com/ncruces/zenity"
@@ -40,6 +41,11 @@ func (w *MacOS) Init() error {
 	}
 
 	conf, _ := w.ReadConfig()
+	if conf.FirstStartup {
+		requestLocalNetwork(time.Minute)
+	} else {
+		go requestLocalNetwork(0)
+	}
 	if conf.FirstStartup {
 		err := zenity.Info(
 			"Would you like WirePod to run when the user logs in?",
