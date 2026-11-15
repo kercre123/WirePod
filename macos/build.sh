@@ -124,6 +124,8 @@ function buildApp() {
   <key>LSUIElement</key><true/>
   <key>NSLocalNetworkUsageDescription</key>
   <string>WirePod needs to connect to your Vector robot on your local network.</string>
+  <key>NSBluetoothAlwaysUsageDescription</key>
+  <string>WirePod uses Bluetooth to set up your Vector robot.</string>
   <key>NSBonjourServices</key>
   <array>
     <string>_app-proto._tcp</string>
