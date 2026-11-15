@@ -209,7 +209,7 @@ func StartChipper(fromInit bool) {
 	logger.Println("Starting chipper server at port " + cfg.Server.Port)
 	listenerOne, err = tls.Listen("tcp", ":"+cfg.Server.Port, &tls.Config{
 		Certificates: []tls.Certificate{cert},
-		CipherSuites: nil,
+		ClientAuth:   tls.RequestClientCert,
 	})
 	if err != nil {
 		ErrMsg(err)
@@ -226,7 +226,7 @@ func StartChipper(fromInit bool) {
 		logger.Println("Starting chipper server at port 8084 for 2.0.1 compatibility")
 		listenerTwo, err = tls.Listen("tcp", ":8084", &tls.Config{
 			Certificates: []tls.Certificate{cert},
-			CipherSuites: nil,
+			ClientAuth:   tls.RequestClientCert,
 		})
 		if err != nil {
 			ErrMsg(err)
