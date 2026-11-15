@@ -6,7 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"syscall"
 
 	all "github.com/kercre123/WirePod/cross/all"
 	"github.com/ncruces/zenity"
@@ -113,19 +115,27 @@ func (w *MacOS) ResourcesPath() string {
 	return filepath.Dir(appPath) + "/../Resources/"
 }
 
-// macOS handles this, we don't need to handle it
+// the stored PID may be stale (crash) and reused by another process,
+// so also check that it is running this same executable
 
 func (w *MacOS) IsPIDProcessRunning(pid int) (bool, error) {
-	// if pid == 0 {
-	// 	return false, nil
-	// }
-	// process, err := os.FindProcess(pid)
-	// if err != nil {
-	// 	return false, nil
-	// }
-	// err = process.Signal(syscall.Signal(0))
-	// return err == nil, nil
-	return false, nil
+	if pid <= 0 || pid == os.Getpid() {
+		return false, nil
+	}
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return false, nil
+	}
+	// EPERM means the process exists but belongs to someone else
+	if err = process.Signal(syscall.Signal(0)); err != nil && err != syscall.EPERM {
+		return false, nil
+	}
+	out, err := exec.Command("ps", "-p", strconv.Itoa(pid), "-o", "comm=").Output()
+	if err != nil {
+		return false, nil
+	}
+	execu, _ := os.Executable()
+	return strings.TrimSpace(string(out)) == execu, nil
 }
 
 func (w *MacOS) IsPodAlreadyRunning() bool {
