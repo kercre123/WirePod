@@ -118,6 +118,9 @@ func InstallWirePod(is InstallSettings) error {
 	}
 
 	UpdateInstallBar(81)
+	UpdateInstallStatus("Unblocking chipper.exe...")
+	UnblockChipper(is)
+
 	UpdateInstallStatus("Updating registry...")
 
 	UpdateRegistry(is)

@@ -97,6 +97,9 @@ func main() {
 		os.Exit(0)
 	}
 
+	cross_win.ClearFirewallRules(filepath.Join(val, "chipper", "chipper.exe"))
+	fmt.Println("Removed wire-pod firewall rules")
+
 	cross_win.DeleteEverythingFromRegistry()
 	fmt.Println("Deleted wire-pod from registry")
 

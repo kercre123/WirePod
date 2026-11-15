@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	cross_win "github.com/kercre123/WirePod/cross/win"
 )
@@ -99,36 +100,32 @@ func ChangeHostname(newHostname string) error {
 	return nil
 }
 
+func UnblockChipper(is InstallSettings) {
+	exe := strings.ReplaceAll(filepath.Join(is.Where, "chipper", "chipper.exe"), "'", "''")
+	cmd := exec.Command("powershell", "-NoProfile", "-Command", fmt.Sprintf("Unblock-File -LiteralPath '%s'", exe))
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("unblock-file failed: %v, output: %s", err, out)
+	}
+}
+
 func AllowThroughFirewall(is InstallSettings) {
-	cmdStr := fmt.Sprintf("netsh advfirewall firewall add rule name=\"wire-pod\" dir=in action=allow program=\"%s\\chipper\\chipper.exe\" enable=yes", is.Where)
-	fmt.Println("Executing command:", cmdStr)
-	cmd := exec.Command("netsh", "advfirewall", "firewall", "add", "rule",
-		"name=wire-pod",
-		"dir=in",
-		"action=allow",
-		"profile=any",
-		"program="+is.Where+"\\chipper\\chipper.exe",
-		"enable=yes")
-
-	out, err := cmd.Output()
-	if err != nil {
-		fmt.Println(string(out))
-		log.Fatalf("Failed to execute command in: %s", err)
+	exe := filepath.Join(is.Where, "chipper", "chipper.exe")
+	cross_win.ClearFirewallRules(exe)
+	for _, dir := range []string{"in", "out"} {
+		out, err := exec.Command("netsh", "advfirewall", "firewall", "add", "rule",
+			"name=wire-pod",
+			"dir="+dir,
+			"action=allow",
+			"profile=any",
+			"program="+exe,
+			"enable=yes").CombinedOutput()
+		if err != nil {
+			log.Printf("failed to add %s firewall rule: %v, output: %s", dir, err, out)
+			continue
+		}
+		log.Printf("added %s firewall rule", dir)
 	}
-	cmd = exec.Command("netsh", "advfirewall", "firewall", "add", "rule",
-		"name=wire-pod",
-		"dir=out",
-		"action=allow",
-		"profile=any",
-		"program="+is.Where+"\\chipper\\chipper.exe",
-		"enable=yes")
-
-	err = cmd.Run()
-	if err != nil {
-		log.Fatalf("Failed to execute command out: %s", err)
-	}
-
-	log.Println("Firewall rule added successfully.")
 }
 
 func StopWirePod_Registry() {
