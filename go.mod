@@ -1,6 +1,6 @@
 module github.com/kercre123/WirePod
 
-go 1.18
+go 1.22
 
 require (
 	fyne.io/fyne/v2 v2.5.0
@@ -9,11 +9,11 @@ require (
 	github.com/fforchino/vector-go-sdk v0.0.0-20231108155304-62168f3595d6
 	github.com/getlantern/systray v1.2.2
 	github.com/go-ole/go-ole v1.3.0
-	github.com/kercre123/wire-pod/chipper v1.5.10
+	github.com/kercre123/wire-pod/chipper v1.6.1
 	github.com/ncruces/zenity v0.10.10
 	github.com/soheilhy/cmux v0.1.5
 	github.com/wlynxg/anet v0.0.1
-	golang.org/x/sys v0.20.0
+	golang.org/x/sys v0.23.0
 	gopkg.in/ini.v1 v1.67.0
 )
 
@@ -99,7 +99,7 @@ require (
 	github.com/rymdport/portal v0.2.2 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
-	github.com/sashabaranov/go-openai v1.41.2 // indirect
+	github.com/sashabaranov/go-openai v1.43.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/soundhound/houndify-sdk-go v0.3.5 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
@@ -117,15 +117,15 @@ require (
 	github.com/yuin/goldmark v1.7.1 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.23.0 // indirect
-	golang.org/x/exp v0.0.0-20231206192017-f3f8817b8deb // indirect
+	golang.org/x/crypto v0.26.0 // indirect
+	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa // indirect
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect
-	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
-	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
+	golang.org/x/mod v0.20.0 // indirect
+	golang.org/x/net v0.28.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/text v0.17.0 // indirect
+	golang.org/x/tools v0.24.0 // indirect
 	google.golang.org/genproto v0.0.0-20231127180814-3a041ad873d4 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231127180814-3a041ad873d4 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231127180814-3a041ad873d4 // indirect
