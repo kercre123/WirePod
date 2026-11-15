@@ -72,7 +72,7 @@ func Wait() {
 }
 
 func PingAllBots(ctx context.Context) {
-	for _, robot := range vars.BotInfo.Robots {
+	for _, robot := range vars.GetBotInfo().Robots {
 		if robot.Activated {
 			v, err := vector.New(vector.WithSerialNo(robot.Esn), vector.WithTarget(robot.IPAddress+":443"), vector.WithToken(robot.GUID))
 			if err != nil {
