@@ -9,7 +9,7 @@ require (
 	github.com/fforchino/vector-go-sdk v0.0.0-20231108155304-62168f3595d6
 	github.com/getlantern/systray v1.2.2
 	github.com/go-ole/go-ole v1.3.0
-	github.com/kercre123/wire-pod/chipper v1.6.1
+	github.com/kercre123/wire-pod/chipper v1.6.2
 	github.com/ncruces/zenity v0.10.10
 	github.com/soheilhy/cmux v0.1.5
 	github.com/wlynxg/anet v0.0.1
@@ -67,7 +67,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josephspurrier/goversioninfo v1.4.0 // indirect
 	github.com/jsummers/gobmp v0.0.0-20230614200233-a9de23ed2e25 // indirect
-	github.com/kercre123/vector-bluetooth v1.0.2 // indirect
+	github.com/kercre123/vector-bluetooth v1.0.3 // indirect
 	github.com/kercre123/vosk-api/go v1.0.2 // indirect
 	github.com/kercre123/zeroconf v1.0.1 // indirect
 	github.com/lib/pq v1.7.0 // indirect
