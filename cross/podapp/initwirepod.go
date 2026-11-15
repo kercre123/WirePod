@@ -8,26 +8,16 @@ import (
 	"os"
 	"strings"
 
-	chipperpb "github.com/digital-dream-labs/api/go/chipperpb"
-	"github.com/digital-dream-labs/api/go/jdocspb"
-	"github.com/digital-dream-labs/api/go/tokenpb"
-	"github.com/digital-dream-labs/hugh/log"
 	"github.com/getlantern/systray"
+	"github.com/kercre123/wire-pod/chipper/pkg/initwirepod"
 	"github.com/kercre123/wire-pod/chipper/pkg/logger"
 	"github.com/kercre123/wire-pod/chipper/pkg/mdnshandler"
-	chipperserver "github.com/kercre123/wire-pod/chipper/pkg/servers/chipper"
-	jdocsserver "github.com/kercre123/wire-pod/chipper/pkg/servers/jdocs"
-	tokenserver "github.com/kercre123/wire-pod/chipper/pkg/servers/token"
 	"github.com/kercre123/wire-pod/chipper/pkg/vars"
 	wpweb "github.com/kercre123/wire-pod/chipper/pkg/wirepod/config-ws"
 	wp "github.com/kercre123/wire-pod/chipper/pkg/wirepod/preqs"
 	sdkWeb "github.com/kercre123/wire-pod/chipper/pkg/wirepod/sdkapp"
 	"github.com/ncruces/zenity"
 	"github.com/soheilhy/cmux"
-
-	//	grpclog "github.com/digital-dream-labs/hugh/grpc/interceptors/logger"
-
-	grpcserver "github.com/digital-dream-labs/hugh/grpc/server"
 )
 
 var serverOne cmux.CMux
@@ -80,30 +70,7 @@ func httpServe(l net.Listener) error {
 }
 
 func grpcServe(l net.Listener, p *wp.Server) error {
-	srv, err := grpcserver.New(
-		grpcserver.WithViper(),
-		grpcserver.WithReflectionService(),
-		grpcserver.WithInsecureSkipVerify(),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	s, _ := chipperserver.New(
-		chipperserver.WithIntentProcessor(p),
-		chipperserver.WithKnowledgeGraphProcessor(p),
-		chipperserver.WithIntentGraphProcessor(p),
-	)
-
-	tokenServer := tokenserver.NewTokenServer()
-	jdocsServer := jdocsserver.NewJdocsServer()
-	//jdocsserver.IniToJson()
-
-	chipperpb.RegisterChipperGrpcServer(srv.Transport(), s)
-	jdocspb.RegisterJdocsServer(srv.Transport(), jdocsServer)
-	tokenpb.RegisterTokenServer(srv.Transport(), tokenServer)
-
-	return srv.Transport().Serve(l)
+	return initwirepod.NewGRPCServer(p).Serve(l)
 }
 
 func BeginWirepodSpecific(sttInitFunc func() error, sttHandlerFunc interface{}, voiceProcessorName string) error {
