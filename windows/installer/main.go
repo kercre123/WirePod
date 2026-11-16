@@ -17,6 +17,7 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	cross_win "github.com/kercre123/WirePod/cross/win"
 	"github.com/ncruces/zenity"
@@ -25,7 +26,8 @@ import (
 //go:embed ico
 var iconData embed.FS
 
-var amd64podURL string = "https://github.com/kercre123/WirePod/releases/latest/download/wire-pod-win-amd64.zip"
+var amd64podURLDefault string = "https://github.com/kercre123/WirePod/releases/latest/download/wire-pod-win-amd64.zip"
+var amd64podURL string = amd64podURLDefault
 
 //var amd64podURL string = "http://192.168.1.2:82/wire-pod-win-amd64.zip"
 
@@ -237,7 +239,18 @@ func GetPreferences(myApp fyne.App) {
 		dlg.Show()
 	})
 
-	nextButton := widget.NewButton("Next", func() {
+	debugButton := widget.NewButton("Debug", func() {
+		url, err := zenity.Entry("Custom URL?", zenity.Title("WirePod Debug"), zenity.OKLabel("Set"), zenity.CancelLabel("Use default"), zenity.EntryText(amd64podURL))
+		if err != zenity.ErrCanceled {
+			if url != "" {
+				amd64podURL = url
+			}
+		} else {
+			amd64podURL = amd64podURLDefault
+		}
+	})
+
+	nextButton := widget.NewButton("Install", func() {
 		is.Where = installDir.Text
 		is.WebPort = webPort.Text
 		if !ValidateInstallDirectory(is.Where) {
@@ -257,6 +270,21 @@ func GetPreferences(myApp fyne.App) {
 			DoInstall(myApp, is)
 		}
 	})
+	nextButton.Importance = widget.HighImportance
+
+	smallDebug := container.NewGridWrap(fyne.NewSize(50, 44), debugButton)
+
+	bigNext := container.NewGridWrap(fyne.NewSize(140, 44), nextButton)
+
+	bottomThing := container.NewHBox(
+		smallDebug,
+		widget.NewSeparator(),
+		layout.NewSpacer(),
+		widget.NewSeparator(),
+		bigNext,
+	)
+
+	nextButton.Resize(fyne.NewSize(100, 100))
 
 	firstCard := widget.NewCard("WirePod Installer", "This program will install wire-pod with the following settings.", container.NewWithoutLayout())
 
@@ -272,7 +300,7 @@ func GetPreferences(myApp fyne.App) {
 		widget.NewRichTextWithText("Web Configurator Port"),
 		webPort,
 		widget.NewSeparator(),
-		nextButton,
+		bottomThing,
 	))
 	window.Show()
 }
