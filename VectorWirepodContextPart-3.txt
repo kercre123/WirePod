@@ -1,0 +1,1089 @@
+SETUP OF THIS FILE:{
+This file is structed as following:
+This file contains context from the folder chipper and the following folders:
+
+/wire-pod/chipper/pkg/wirepod/config-ws
+/wire-pod/chipper/pkg/wirepod/localization
+/wire-pod/chipper/pkg/wirepod/preqs
+/wire-pod/chipper/pkg/wirepod/sdkapp
+/wire-pod/chipper/pkg/wirepod/setup
+Since this code base is quiet large i will make multiple files for you to understand the context better this is part 3
+
+I will first give you the path to the file, then i will give you either the full file code or  just the snippets if they take too much space, if its a snippet i will place "SNIPPET" after the path, if there is no "SNIPPET" you can assume its the full file code
+For some files i will add some comments to descirbe them if the other files look the same to save space and memory this will be indicated with "EXTRA CONTEXT" at the end of the code from that file 
+}
+
+/wire-pod/chipper/pkg/wirepod/config-ws/webserver.go
+SNIPPET
+package webserver
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
+
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/scripting"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	"github.com/kercre123/wire-pod/chipper/pkg/wirepod/localization"
+	processreqs "github.com/kercre123/wire-pod/chipper/pkg/wirepod/preqs"
+	botsetup "github.com/kercre123/wire-pod/chipper/pkg/wirepod/setup"
+)
+
+var SttInitFunc func() error
+
+func apiHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+
+	switch strings.TrimPrefix(r.URL.Path, "/api/") {
+	case "add_custom_intent":
+		handleAddCustomIntent(w, r)
+	case "edit_custom_intent":
+		handleEditCustomIntent(w, r)
+	case "get_custom_intents_json":
+		handleGetCustomIntentsJSON(w)
+	case "remove_custom_intent":
+		handleRemoveCustomIntent(w, r)
+	case "set_weather_api":
+		handleSetWeatherAPI(w, r)
+	case "get_weather_api":
+		handleGetWeatherAPI(w)
+	case "set_kg_api":
+		handleSetKGAPI(w, r)
+	case "get_kg_api":
+		handleGetKGAPI(w)
+	case "set_stt_info":
+		handleSetSTTInfo(w, r)
+	case "get_download_status":
+		handleGetDownloadStatus(w)
+	case "get_stt_info":
+		handleGetSTTInfo(w)
+	case "get_config":
+		handleGetConfig(w)
+	case "get_logs":
+		handleGetLogs(w)
+	case "get_debug_logs":
+		handleGetDebugLogs(w)
+	case "is_running":
+		handleIsRunning(w)
+	case "delete_chats":
+		handleDeleteChats(w)
+	case "get_ota":
+		handleGetOTA(w, r)
+	case "get_version_info":
+		handleGetVersionInfo(w)
+	case "generate_certs":
+		handleGenerateCerts(w)
+	case "is_api_v3":
+		fmt.Fprintf(w, "it is!")
+	default:
+		http.Error(w, "not found", http.StatusNotFound)
+	}
+}
+
+func handleAddCustomIntent(w http.ResponseWriter, r *http.Request) {
+	var intent vars.CustomIntent
+	if err := json.NewDecoder(r.Body).Decode(&intent); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if anyEmpty(intent.Name, intent.Description, intent.Intent) || len(intent.Utterances) == 0 {
+		http.Error(w, "missing required field (name, description, utterances, and intent are required)", http.StatusBadRequest)
+		return
+	}
+	intent.LuaScript = strings.TrimSpace(intent.LuaScript)
+	if intent.LuaScript != "" {
+		if err := scripting.ValidateLuaScript(intent.LuaScript); err != nil {
+			http.Error(w, "lua validation error: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	vars.CustomIntentsExist = true
+	vars.CustomIntents = append(vars.CustomIntents, intent)
+	saveCustomIntents()
+	fmt.Fprint(w, "Intent added successfully.")
+}
+
+func handleEditCustomIntent(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Number int `json:"number"`
+		vars.CustomIntent
+	}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if request.Number < 1 || request.Number > len(vars.CustomIntents) {
+		http.Error(w, "invalid intent number", http.StatusBadRequest)
+		return
+	}
+	intent := &vars.CustomIntents[request.Number-1]
+	if request.Name != "" {
+		intent.Name = request.Name
+	}
+	if request.Description != "" {
+		intent.Description = request.Description
+	}
+	if len(request.Utterances) != 0 {
+		intent.Utterances = request.Utterances
+	}
+	if request.Intent != "" {
+		intent.Intent = request.Intent
+	}
+	if request.Params.ParamName != "" {
+		intent.Params.ParamName = request.Params.ParamName
+	}
+	if request.Params.ParamValue != "" {
+		intent.Params.ParamValue = request.Params.ParamValue
+	}
+	if request.Exec != "" {
+		intent.Exec = request.Exec
+	}
+	if request.LuaScript != "" {
+		intent.LuaScript = request.LuaScript
+		if err := scripting.ValidateLuaScript(intent.LuaScript); err != nil {
+			http.Error(w, "lua validation error: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if len(request.ExecArgs) != 0 {
+		intent.ExecArgs = request.ExecArgs
+	}
+	intent.IsSystemIntent = false
+	saveCustomIntents()
+	fmt.Fprint(w, "Intent edited successfully.")
+}
+
+func handleGetCustomIntentsJSON(w http.ResponseWriter) {
+	if !vars.CustomIntentsExist {
+		http.Error(w, "you must create an intent first", http.StatusBadRequest)
+		return
+	}
+	customIntentJSONFile, err := os.ReadFile(vars.CustomIntentsPath)
+	if err != nil {
+		http.Error(w, "could not read custom intents file", http.StatusInternalServerError)
+		logger.Println(err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(customIntentJSONFile)
+}
+
+func handleRemoveCustomIntent(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Number int `json:"number"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if request.Number < 1 || request.Number > len(vars.CustomIntents) {
+		http.Error(w, "invalid intent number", http.StatusBadRequest)
+		return
+	}
+	vars.CustomIntents = append(vars.CustomIntents[:request.Number-1], vars.CustomIntents[request.Number:]...)
+	saveCustomIntents()
+	fmt.Fprint(w, "Intent removed successfully.")
+}
+
+func handleSetWeatherAPI(w http.ResponseWriter, r *http.Request) {
+	var config struct {
+		Provider string `json:"provider"`
+		Key      string `json:"key"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if config.Provider == "" {
+		vars.APIConfig.Weather.Enable = false
+	} else {
+		vars.APIConfig.Weather.Enable = true
+		vars.APIConfig.Weather.Key = strings.TrimSpace(config.Key)
+		vars.APIConfig.Weather.Provider = config.Provider
+	}
+	vars.WriteConfigToDisk()
+	fmt.Fprint(w, "Changes successfully applied.")
+}
+
+func handleGetWeatherAPI(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(vars.APIConfig.Weather)
+}
+
+func handleSetKGAPI(w http.ResponseWriter, r *http.Request) {
+	if err := json.NewDecoder(r.Body).Decode(&vars.APIConfig.Knowledge); err != nil {
+		fmt.Println(err)
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	vars.WriteConfigToDisk()
+	fmt.Fprint(w, "Changes successfully applied.")
+}
+
+func handleGetKGAPI(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(vars.APIConfig.Knowledge)
+}
+
+func handleSetSTTInfo(w http.ResponseWriter, r *http.Request) {
+	var request struct {
+		Language string `json:"language"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if vars.APIConfig.STT.Service == "vosk" {
+		if !isValidLanguage(request.Language, localization.ValidVoskModels) {
+			http.Error(w, "language not valid", http.StatusBadRequest)
+			return
+		}
+		if !isDownloadedLanguage(request.Language, vars.DownloadedVoskModels) {
+			go localization.DownloadVoskModel(request.Language)
+			fmt.Fprint(w, "downloading language model...")
+			return
+		}
+	} else if vars.APIConfig.STT.Service == "whisper.cpp" {
+		if !isValidLanguage(request.Language, localization.ValidVoskModels) {
+			http.Error(w, "language not valid", http.StatusBadRequest)
+			return
+		}
+	} else {
+		http.Error(w, "service must be vosk or whisper", http.StatusBadRequest)
+		return
+	}
+	vars.APIConfig.STT.Language = request.Language
+	vars.APIConfig.PastInitialSetup = true
+	vars.WriteConfigToDisk()
+	processreqs.ReloadVosk()
+	logger.Println("Reloaded voice processor successfully")
+	fmt.Fprint(w, "Language switched successfully.")
+}
+
+func handleGetDownloadStatus(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(localization.DownloadStatus))
+	if localization.DownloadStatus == "success" || strings.Contains(localization.DownloadStatus, "error") {
+		localization.DownloadStatus = "not downloading"
+	}
+}
+
+func handleGetSTTInfo(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(vars.APIConfig.STT)
+}
+
+func handleGetConfig(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(vars.APIConfig)
+}
+func saveCustomIntents() {
+	customIntentJSONFile, _ := json.Marshal(vars.CustomIntents)
+	os.WriteFile(vars.CustomIntentsPath, customIntentJSONFile, 0644)
+}
+func StartWebServer() {
+	botsetup.RegisterSSHAPI()
+	botsetup.RegisterBLEAPI()
+	http.HandleFunc("/api/", apiHandler)
+	http.HandleFunc("/session-certs/", certHandler)
+	var webRoot http.Handler
+	if runtime.GOOS == "darwin" && vars.Packaged {
+		appPath, _ := os.Executable()
+		webRoot = http.FileServer(http.Dir(filepath.Dir(appPath) + "/../Frameworks/chipper/webroot"))
+	} else if runtime.GOOS == "android" || runtime.GOOS == "ios" {
+		webRoot = http.FileServer(http.Dir(vars.AndroidPath + "/static/webroot"))
+	} else {
+		webRoot = http.FileServer(http.Dir("./webroot"))
+	}
+	http.Handle("/", DisableCachingAndSniffing(webRoot))
+	fmt.Printf("Starting webserver at port " + vars.WebPort + " (http://localhost:" + vars.WebPort + ")\n")
+	if err := http.ListenAndServe(":"+vars.WebPort, nil); err != nil {
+		logger.Println("Error binding to " + vars.WebPort + ": " + err.Error())
+		if vars.Packaged {
+			logger.ErrMsg("FATAL: Wire-pod was unable to bind to port " + vars.WebPort + ". Another process is likely using it. Exiting.")
+		}
+		os.Exit(1)
+	}
+}
+END OF SNIPPET
+
+
+/wire-pod/chipper/pkg/wirepod/localization
+EXTRA CONTEXT: handels the download of the VoskModel in this folder you have download.go and localization.go let me know if you need those 
+
+/wire-pod/chipper/pkg/wirepod/preqs/intent_graph.go
+package processreqs
+
+import (
+	"strings"
+
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	"github.com/kercre123/wire-pod/chipper/pkg/vtt"
+	sr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/speechrequest"
+	ttr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/ttr"
+)
+
+func (s *Server) ProcessIntentGraph(req *vtt.IntentGraphRequest) (*vtt.IntentGraphResponse, error) {
+	var successMatched bool
+	speechReq := sr.ReqToSpeechRequest(req)
+	var transcribedText string
+	if !isSti {
+		var err error
+		transcribedText, err = sttHandler(speechReq)
+		if err != nil {
+			ttr.IntentPass(req, "intent_system_noaudio", "voice processing error: "+err.Error(), map[string]string{"error": err.Error()}, true)
+			return nil, nil
+		}
+		if strings.TrimSpace(transcribedText) == "" {
+			ttr.IntentPass(req, "intent_system_noaudio", "", map[string]string{}, false)
+			return nil, nil
+		}
+		successMatched = ttr.ProcessTextAll(req, transcribedText, vars.IntentList, speechReq.IsOpus)
+	} else {
+		intent, slots, err := stiHandler(speechReq)
+		if err != nil {
+			if err.Error() == "inference not understood" {
+				logger.Println("Bot " + speechReq.Device + " No intent was matched")
+				ttr.IntentPass(req, "intent_system_unmatched", "voice processing error", map[string]string{"error": err.Error()}, true)
+				return nil, nil
+			}
+			logger.Println(err)
+			ttr.IntentPass(req, "intent_system_noaudio", "voice processing error", map[string]string{"error": err.Error()}, true)
+			return nil, nil
+		}
+		ttr.ParamCheckerSlotsEnUS(req, intent, slots, speechReq.IsOpus, speechReq.Device)
+		return nil, nil
+	}
+	// if !successMatched {
+	// 	logger.Println("No intent was matched.")
+	// 	if vars.APIConfig.Knowledge.Enable && vars.APIConfig.Knowledge.Provider == "openai" && len([]rune(transcribedText)) >= 8 {
+	// 		apiResponse := openaiRequest(transcribedText)
+	// 		response := &pb.IntentGraphResponse{
+	// 			Session:      req.Session,
+	// 			DeviceId:     req.Device,
+	// 			ResponseType: pb.IntentGraphMode_KNOWLEDGE_GRAPH,
+	// 			SpokenText:   apiResponse,
+	// 			QueryText:    transcribedText,
+	// 			IsFinal:      true,
+	// 		}
+	// 		req.Stream.Send(response)
+	// 		return nil, nil
+	// 	}
+	// 	ttr.IntentPass(req, "intent_system_unmatched", transcribedText, map[string]string{"": ""}, false)
+	// 	return nil, nil
+	// }
+	if !successMatched {
+		if vars.APIConfig.Knowledge.IntentGraph && vars.APIConfig.Knowledge.Enable {
+			logger.Println("Making LLM request for device " + req.Device + "...")
+			_, err := ttr.StreamingKGSim(req, req.Device, transcribedText, false)
+			if err != nil {
+				logger.Println("LLM error: " + err.Error())
+				logger.LogUI("LLM error: " + err.Error())
+				ttr.IntentPass(req, "intent_system_unmatched", transcribedText, map[string]string{"": ""}, false)
+				ttr.KGSim(req.Device, "There was an error getting a response from the L L M. Check the logs in the web interface.")
+			}
+			logger.Println("Bot " + speechReq.Device + " request served.")
+			return nil, nil
+		}
+		logger.Println("No intent was matched.")
+		ttr.IntentPass(req, "intent_system_unmatched", transcribedText, map[string]string{"": ""}, false)
+		return nil, nil
+	}
+	logger.Println("Bot " + speechReq.Device + " request served.")
+	return nil, nil
+}
+
+
+
+/wire-pod/chipper/pkg/wirepod/preqs/intent.go
+package processreqs
+
+import (
+	"strings"
+
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	"github.com/kercre123/wire-pod/chipper/pkg/vtt"
+	sr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/speechrequest"
+	ttr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/ttr"
+)
+
+// This is here for compatibility with 1.6 and older software
+func (s *Server) ProcessIntent(req *vtt.IntentRequest) (*vtt.IntentResponse, error) {
+	var successMatched bool
+	speechReq := sr.ReqToSpeechRequest(req)
+	var transcribedText string
+	if !isSti {
+		var err error
+		transcribedText, err = sttHandler(speechReq)
+		if err != nil {
+			ttr.IntentPass(req, "intent_system_noaudio", "voice processing error: "+err.Error(), map[string]string{"error": err.Error()}, true)
+			return nil, nil
+		}
+		if strings.TrimSpace(transcribedText) == "" {
+			ttr.IntentPass(req, "intent_system_noaudio", "", map[string]string{}, false)
+			return nil, nil
+		}
+		successMatched = ttr.ProcessTextAll(req, transcribedText, vars.IntentList, speechReq.IsOpus)
+	} else {
+		intent, slots, err := stiHandler(speechReq)
+		if err != nil {
+			if err.Error() == "inference not understood" {
+				logger.Println("No intent was matched")
+				ttr.IntentPass(req, "intent_system_unmatched", "voice processing error", map[string]string{"error": err.Error()}, true)
+				return nil, nil
+			}
+			logger.Println(err)
+			ttr.IntentPass(req, "intent_system_noaudio", "voice processing error", map[string]string{"error": err.Error()}, true)
+			return nil, nil
+		}
+		ttr.ParamCheckerSlotsEnUS(req, intent, slots, speechReq.IsOpus, speechReq.Device)
+		return nil, nil
+	}
+	if !successMatched {
+		if vars.APIConfig.Knowledge.IntentGraph && vars.APIConfig.Knowledge.Enable {
+			logger.Println("Making LLM request for device " + req.Device + "...")
+			_, err := ttr.StreamingKGSim(req, req.Device, transcribedText, false)
+			if err != nil {
+				logger.Println("LLM error: " + err.Error())
+				logger.LogUI("LLM error: " + err.Error())
+				ttr.IntentPass(req, "intent_system_unmatched", transcribedText, map[string]string{"": ""}, false)
+				ttr.KGSim(req.Device, "There was an error getting a response from the L L M. Check the logs in the web interface.")
+			}
+			logger.Println("Bot " + speechReq.Device + " request served.")
+			return nil, nil
+		}
+		logger.Println("No intent was matched.")
+		ttr.IntentPass(req, "intent_system_unmatched", transcribedText, map[string]string{"": ""}, false)
+		return nil, nil
+	}
+	logger.Println("Bot " + speechReq.Device + " request served.")
+	return nil, nil
+}
+/wire-pod/chipper/pkg/wirepod/preqs/knowledgegraph.go
+package processreqs
+
+import (
+	"encoding/json"
+	"strings"
+
+	pb "github.com/digital-dream-labs/api/go/chipperpb"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	"github.com/kercre123/wire-pod/chipper/pkg/vtt"
+	sr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/speechrequest"
+	ttr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/ttr"
+	"github.com/pkg/errors"
+	"github.com/soundhound/houndify-sdk-go"
+)
+
+var HKGclient houndify.Client
+var HoundEnable bool = true
+
+func ParseSpokenResponse(serverResponseJSON string) (string, error) {
+	result := make(map[string]interface{})
+	err := json.Unmarshal([]byte(serverResponseJSON), &result)
+	if err != nil {
+		logger.Println(err.Error())
+		return "", errors.New("failed to decode json")
+	}
+	if !strings.EqualFold(result["Status"].(string), "OK") {
+		return "", errors.New(result["ErrorMessage"].(string))
+	}
+	if result["NumToReturn"].(float64) < 1 {
+		return "", errors.New("no results to return")
+	}
+	return result["AllResults"].([]interface{})[0].(map[string]interface{})["SpokenResponseLong"].(string), nil
+}
+
+func InitKnowledge() {
+	if vars.APIConfig.Knowledge.Enable && vars.APIConfig.Knowledge.Provider == "houndify" {
+		if vars.APIConfig.Knowledge.ID == "" || vars.APIConfig.Knowledge.Key == "" {
+			vars.APIConfig.Knowledge.Enable = false
+			logger.Println("Houndify Client Key or ID was empty, not initializing kg client")
+		} else {
+			HKGclient = houndify.Client{
+				ClientID:  vars.APIConfig.Knowledge.ID,
+				ClientKey: vars.APIConfig.Knowledge.Key,
+			}
+			HKGclient.EnableConversationState()
+			logger.Println("Initialized Houndify client")
+		}
+	}
+}
+
+var NoResult string = "NoResultCommand"
+var NoResultSpoken string
+
+func houndifyKG(req sr.SpeechRequest) string {
+	var apiResponse string
+	if vars.APIConfig.Knowledge.Enable && vars.APIConfig.Knowledge.Provider == "houndify" {
+		logger.Println("Sending request to Houndify...")
+		serverResponse := StreamAudioToHoundify(req, HKGclient)
+		apiResponse, _ = ParseSpokenResponse(serverResponse)
+		logger.Println("Houndify response: " + apiResponse)
+	} else {
+		apiResponse = "Houndify is not enabled."
+		logger.Println("Houndify is not enabled.")
+	}
+	return apiResponse
+}
+
+func streamingKG(req *vtt.KnowledgeGraphRequest, speechReq sr.SpeechRequest) string {
+	// have him start "thinking" right after the text is transcribed
+	transcribedText, err := sttHandler(speechReq)
+	if err != nil {
+		return "There was an error."
+	}
+	kg := pb.KnowledgeGraphResponse{
+		Session:     req.Session,
+		DeviceId:    req.Device,
+		CommandType: NoResult,
+		SpokenText:  "bla bla bla bla bla bla bla bla bla bla",
+	}
+	req.Stream.Send(&kg)
+	_, err = ttr.StreamingKGSim(req, req.Device, transcribedText, true)
+	if err != nil {
+		logger.Println("LLM error: " + err.Error())
+	}
+	logger.Println("(KG) Bot " + speechReq.Device + " request served.")
+	return ""
+}
+
+// Takes a SpeechRequest, figures out knowledgegraph provider, makes request, returns API response
+func KgRequest(req *vtt.KnowledgeGraphRequest, speechReq sr.SpeechRequest) string {
+	if vars.APIConfig.Knowledge.Enable {
+		if vars.APIConfig.Knowledge.Provider == "houndify" {
+			return houndifyKG(speechReq)
+		}
+	}
+	return "Knowledge graph is not enabled. This can be enabled in the web interface."
+}
+
+func (s *Server) ProcessKnowledgeGraph(req *vtt.KnowledgeGraphRequest) (*vtt.KnowledgeGraphResponse, error) {
+	InitKnowledge()
+	speechReq := sr.ReqToSpeechRequest(req)
+	if vars.APIConfig.Knowledge.Enable && vars.APIConfig.Knowledge.Provider != "houndify" {
+		streamingKG(req, speechReq)
+	} else {
+		apiResponse := KgRequest(req, speechReq)
+		kg := pb.KnowledgeGraphResponse{
+			Session:     req.Session,
+			DeviceId:    req.Device,
+			CommandType: NoResult,
+			SpokenText:  apiResponse,
+		}
+		logger.Println("(KG) Bot " + speechReq.Device + " request served.")
+		if err := req.Stream.Send(&kg); err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
+
+}
+
+/wire-pod/chipper/pkg/wirepod/preqs/server.go
+
+package processreqs
+
+import (
+	"fmt"
+
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	sr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/speechrequest"
+	ttr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/ttr"
+)
+
+// Server stores the config
+type Server struct{}
+
+var VoiceProcessor = ""
+
+type JsonIntent struct {
+	Name              string   `json:"name"`
+	Keyphrases        []string `json:"keyphrases"`
+	RequireExactMatch bool     `json:"requiresexact"`
+}
+
+var sttLanguage string = "en-US"
+
+// speech-to-text
+var sttHandler func(sr.SpeechRequest) (string, error)
+
+// speech-to-intent (rhino)
+var stiHandler func(sr.SpeechRequest) (string, map[string]string, error)
+
+var isSti bool = false
+
+func ReloadVosk() {
+	if vars.APIConfig.STT.Service == "vosk" || vars.APIConfig.STT.Service == "whisper.cpp" {
+		vars.SttInitFunc()
+		vars.IntentList, _ = vars.LoadIntents()
+	}
+}
+
+// New returns a new server
+func New(InitFunc func() error, SttHandler interface{}, voiceProcessor string) (*Server, error) {
+
+	// Decide the TTS language
+	if voiceProcessor != "vosk" && voiceProcessor != "whisper.cpp" {
+		vars.APIConfig.STT.Language = "en-US"
+	}
+	sttLanguage = vars.APIConfig.STT.Language
+	vars.IntentList, _ = vars.LoadIntents()
+	logger.Println("Initiating " + voiceProcessor + " voice processor with language " + sttLanguage)
+	vars.SttInitFunc = InitFunc
+	err := InitFunc()
+	if err != nil {
+		return nil, err
+	}
+
+	// SttHandler can either be `func(sr.SpeechRequest) (string, error)` or `func (sr.SpeechRequest) (string, map[string]string, error)`
+	// second one exists to accomodate Rhino
+
+	// check function type
+	if str, is := SttHandler.(func(sr.SpeechRequest) (string, error)); is {
+		sttHandler = str
+	} else if str, is := SttHandler.(func(sr.SpeechRequest) (string, map[string]string, error)); is {
+		stiHandler = str
+		isSti = true
+	} else {
+		return nil, fmt.Errorf("stthandler not of correct type")
+	}
+
+	// Initiating the chosen voice processor and load intents from json
+	VoiceProcessor = voiceProcessor
+
+	// Load plugins
+	ttr.LoadPlugins()
+
+	return &Server{}, err
+}
+
+/wire-pod/chipper/pkg/wirepod/preqs/stream_houndify.go
+package processreqs
+
+import (
+	"fmt"
+	"io"
+
+	sr "github.com/kercre123/wire-pod/chipper/pkg/wirepod/speechrequest"
+	"github.com/soundhound/houndify-sdk-go"
+)
+
+func StreamAudioToHoundify(sreq sr.SpeechRequest, client houndify.Client) string {
+	var err error
+	rp, wp := io.Pipe()
+	req := houndify.VoiceRequest{
+		AudioStream: rp,
+		UserID:      sreq.Device,
+		RequestID:   sreq.Session,
+	}
+	done := make(chan bool)
+	speechDone := false
+	go func(wp *io.PipeWriter) {
+		defer wp.Close()
+
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				var chunk []byte
+				chunk, err = sreq.GetNextStreamChunkOpus()
+				speechDone, _ = sreq.DetectEndOfSpeech()
+				if err != nil {
+					fmt.Println("End of stream")
+					return
+				}
+				wp.Write(chunk)
+				if speechDone {
+					return
+				}
+			}
+		}
+	}(wp)
+
+	partialTranscripts := make(chan houndify.PartialTranscript)
+	go func() {
+		for partial := range partialTranscripts {
+			if *partial.SafeToStopAudio {
+				fmt.Println("SafeToStopAudio received")
+				done <- true
+				return
+			}
+		}
+	}()
+
+	serverResponse, err := client.VoiceSearch(req, partialTranscripts)
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println(serverResponse)
+	}
+	return serverResponse
+}
+
+/wire-pod/chipper/pkg/wirepod/sdkapp/bcassume.go
+
+package sdkapp
+
+import (
+	"log"
+	"time"
+
+	"github.com/fforchino/vector-go-sdk/pkg/vectorpb"
+)
+
+func assumeBehaviorControl(robot Robot, robotIndex int, priority string) {
+	var controlRequest *vectorpb.BehaviorControlRequest
+	if priority == "high" {
+		controlRequest = &vectorpb.BehaviorControlRequest{
+			RequestType: &vectorpb.BehaviorControlRequest_ControlRequest{
+				ControlRequest: &vectorpb.ControlRequest{
+					Priority: vectorpb.ControlRequest_OVERRIDE_BEHAVIORS,
+				},
+			},
+		}
+	} else {
+		controlRequest = &vectorpb.BehaviorControlRequest{
+			RequestType: &vectorpb.BehaviorControlRequest_ControlRequest{
+				ControlRequest: &vectorpb.ControlRequest{
+					Priority: vectorpb.ControlRequest_DEFAULT,
+				},
+			},
+		}
+	}
+	go func() {
+		start := make(chan bool)
+		stop := make(chan bool)
+		robots[robotIndex].BcAssumption = true
+		go func() {
+			// * begin - modified from official vector-go-sdk
+			r, err := robot.Vector.Conn.BehaviorControl(
+				robot.Ctx,
+			)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			if err := r.Send(controlRequest); err != nil {
+				log.Println(err)
+				return
+			}
+
+			for {
+				ctrlresp, err := r.Recv()
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				if ctrlresp.GetControlGrantedResponse() != nil {
+					start <- true
+					break
+				}
+			}
+
+			for {
+				select {
+				case <-stop:
+					if err := r.Send(
+						&vectorpb.BehaviorControlRequest{
+							RequestType: &vectorpb.BehaviorControlRequest_ControlRelease{
+								ControlRelease: &vectorpb.ControlRelease{},
+							},
+						},
+					); err != nil {
+						log.Println(err)
+						return
+					}
+					return
+				default:
+					continue
+				}
+			}
+			// * end - modified from official vector-go-sdk
+		}()
+		for range start {
+			for {
+				if robots[robotIndex].BcAssumption {
+					time.Sleep(time.Millisecond * 500)
+				} else {
+					break
+				}
+			}
+			stop <- true
+		}
+	}()
+
+/wire-pod/chipper/pkg/wirepod/sdkapp/jdocspinger.go
+SNIPPET:
+// the escape pod CA cert only gets appended to the cert store when a jdocs connection is created
+// this doesn't happen at every boot
+// this utilizes Vector's connCheck to see if a bot has disconnected from the server for more than 10 seconds
+// if it has, it will pull jdocs from the bot which will cause the CA cert to get appended to the store
+
+// setting JDOCS_PINGER_ENABLED=false will disable jdocs pinger
+END OF SNIPPET
+
+EXTRA CONTEXT: dont think we need full file from this i have added only the comments at the top
+
+
+/wire-pod/chipper/pkg/wirepod/sdkapp/robot.go
+package sdkapp
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/digital-dream-labs/hugh/grpc/client"
+	"github.com/fforchino/vector-go-sdk/pkg/vector"
+	"github.com/fforchino/vector-go-sdk/pkg/vectorpb"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+)
+
+var robots []Robot
+var timerStopIndexes []int
+var inhibitCreation bool
+
+type Robot struct {
+	ESN               string
+	GUID              string
+	Target            string
+	Vector            *vector.Vector
+	BcAssumption      bool
+	CamStreaming      bool
+	EventStreamClient vectorpb.ExternalInterface_EventStreamClient
+	EventsStreaming   bool
+	StimState         float32
+	ConnTimer         int32
+	Ctx               context.Context
+}
+
+func newRobot(serial string) (Robot, int, error) {
+	inhibitCreation = true
+	var RobotObj Robot
+
+	// generate context
+	RobotObj.Ctx = context.Background()
+
+	// find robot info in BotInfo
+	matched := false
+	for _, robot := range vars.BotInfo.Robots {
+		if strings.EqualFold(serial, robot.Esn) {
+			RobotObj.ESN = strings.TrimSpace(strings.ToLower(serial))
+			RobotObj.Target = robot.IPAddress + ":443"
+			matched = true
+			if robot.GUID == "" {
+				robot.GUID = vars.BotInfo.GlobalGUID
+				RobotObj.GUID = vars.BotInfo.GlobalGUID
+			} else {
+				RobotObj.GUID = robot.GUID
+			}
+			logger.Println("Connecting to " + serial + " with GUID " + RobotObj.GUID)
+		}
+	}
+	if !matched {
+		inhibitCreation = false
+		return RobotObj, 0, fmt.Errorf("error: robot not found in SDK info file")
+	}
+
+	// create Vector instance
+	var err error
+	RobotObj.Vector, err = vector.New(
+		vector.WithTarget(RobotObj.Target),
+		vector.WithSerialNo(RobotObj.ESN),
+		vector.WithToken(RobotObj.GUID),
+	)
+	if err != nil {
+		inhibitCreation = false
+		return RobotObj, 0, err
+	}
+
+	// connection check
+	_, err = RobotObj.Vector.Conn.BatteryState(context.Background(), &vectorpb.BatteryStateRequest{})
+	if err != nil {
+		inhibitCreation = false
+		return RobotObj, 0, err
+	}
+
+	// create client for event stream
+	RobotObj.EventStreamClient, err = RobotObj.Vector.Conn.EventStream(
+		RobotObj.Ctx,
+		&vectorpb.EventRequest{
+			ListType: &vectorpb.EventRequest_WhiteList{
+				WhiteList: &vectorpb.FilterList{
+					// this will be used only for stimulation graph for now
+					List: []string{"stimulation_info"},
+				},
+			},
+		},
+	)
+	if err != nil {
+		inhibitCreation = false
+		return RobotObj, 0, err
+	}
+	RobotObj.CamStreaming = false
+	RobotObj.EventsStreaming = false
+
+	// we have confirmed robot connection works, append to list of bots
+	robots = append(robots, RobotObj)
+	robotIndex := len(robots) - 1
+
+	// begin inactivity timer
+	go connTimer(robotIndex)
+
+	inhibitCreation = false
+	return RobotObj, robotIndex, nil
+}
+
+func getRobot(serial string) (Robot, int, error) {
+	// look in robot list
+	for {
+		if !inhibitCreation {
+			break
+		}
+		time.Sleep(time.Second / 2)
+	}
+	for index, robot := range robots {
+		if strings.EqualFold(serial, robot.ESN) {
+			return robot, index, nil
+		}
+	}
+	return newRobot(serial)
+}
+
+// if connection is inactive for more than 5 minutes, remove robot
+// run this as a goroutine
+func connTimer(ind int) {
+	// Check if the index is in the list
+	if len(robots) <= ind {
+		return
+	}
+
+	robots[ind].ConnTimer = 0
+	for {
+		time.Sleep(time.Second)
+		// check if timer needs to be stopped
+		for _, num := range timerStopIndexes {
+			if num == ind {
+				logger.Println("Conn timer for robot index " + strconv.Itoa(ind) + " stopping")
+				var newIndexes []int
+				for _, num := range timerStopIndexes {
+					if num != ind {
+						newIndexes = append(newIndexes, num)
+					}
+				}
+				timerStopIndexes = newIndexes
+				return
+			}
+		}
+		if robots[ind].ConnTimer >= 300 {
+			logger.Println("Closing SDK connection for " + robots[ind].ESN + ", source: connTimer")
+			removeRobot(robots[ind].ESN, "connTimer")
+			return
+		}  
+		robots[ind].ConnTimer = robots[ind].ConnTimer + 1
+	}
+}
+
+func removeRobot(serial, source string) {
+	inhibitCreation = true
+	var newRobots []Robot
+	for ind, robot := range robots {
+		if !strings.EqualFold(serial, robot.ESN) {
+			newRobots = append(newRobots, robot)
+		} else {
+			if source == "server" {
+				timerStopIndexes = append(timerStopIndexes, ind)
+			}
+			robots[ind].CamStreaming = false
+			robots[ind].EventsStreaming = false
+			robots[ind].BcAssumption = false
+			// give time for all of that to stop
+			time.Sleep(time.Second * 3)
+		}
+	}
+	robots = newRobots
+	inhibitCreation = false
+}
+
+func NewWP(serial string, useGlobal bool) (*vector.Vector, error) {
+	var target, guid string
+	if serial == "" {
+		return nil, fmt.Errorf("serial string missing")
+	}
+	matched := false
+	for _, robot := range vars.BotInfo.Robots {
+		if strings.EqualFold(serial, robot.Esn) {
+			matched = true
+			target = robot.IPAddress + ":443"
+			guid = robot.GUID
+			break
+		}
+	}
+	if !matched {
+		logger.Println("serial did not match any bot in bot json")
+		return nil, errors.New("serial did not match any bot in bot json")
+	}
+	c, err := client.New(
+		client.WithTarget(target),
+		client.WithInsecureSkipVerify(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.Connect(); err != nil {
+		return nil, err
+	}
+	return vector.New(
+		vector.WithTarget(target),
+		vector.WithSerialNo(serial),
+		vector.WithToken(guid),
+	)
+}
+
+/wire-pod/chipper/pkg/wirepod/sdkapp/server.go
+EXTRA CONTEXT : this is a really big file with  CASES to handle the web server side of logic like applying eye color, letting vector speak
+
+/wire-pod/chipper/pkg/wirepod/sdkapp/urlreqs.go
+SNIPPET:
+func setSettingSDKstring(robot Robot, setting string, value string) {
+	url := "https://" + robot.Target + "/v1/update_settings"
+	var updateJSON = []byte(`{"update_settings": true, "settings": {"` + setting + `": "` + value + `" } }`)
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(updateJSON))
+	req.Header.Set("Authorization", "Bearer "+robot.GUID)
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{Transport: transCfg}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+}
+END OF SNIPPET
+EXTRA CONTEXT:  This file has functions like these to handle the http url side 
+
+/wire-pod/chipper/pkg/wirepod/setup/ble_other.go
+/wire-pod/chipper/pkg/wirepod/setup/ble.go
+/wire-pod/chipper/pkg/wirepod/setup/certs.go/Users/damianbitel/Vector3/wire-pod/chipper/pkg/wirepod/setup/ssh.go
+/wire-pod/chipper/pkg/wirepod/setup/ssh.go
+
+EXTRA CONTEXT all those files handle the setup of vector  wifi network and such 
+

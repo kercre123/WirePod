@@ -1,0 +1,823 @@
+SETUP OF THIS FILE:{
+This file is structed as following:
+This file contains context from the folder chipper and the following folders:
+cmd
+epod
+intent-data
+jdocs
+/pkg/initwirepod
+/pkg/logger
+/pkg/mdnshandler
+/pkg/scripting
+
+Since this code base is quiet large i will make multiple files for you to understand the context better this is part 1
+
+I will first give you the path to the file, then i will give you either the full file code or  just the snippets if they take too much space, if its a snippet i will place "SNIPPET" after the path, if there is no "SNIPPET" you can assume its the full file code
+For some files i will add some comments to descirbe them if the other files look the same to save space and memory this will be indicated with "EXTRA CONTEXT" at the end of the code from that file 
+}
+
+
+
+/wire-pod/chipper/cmd/vosk/main.go
+package main
+
+import (
+	"github.com/kercre123/wire-pod/chipper/pkg/initwirepod"
+	stt "github.com/kercre123/wire-pod/chipper/pkg/wirepod/stt/whisper.cpp"
+)
+
+func main() {
+	initwirepod.StartFromProgramInit(stt.Init, stt.STT, stt.Name)
+}
+EXTRA CONTEXT: in the foler /wire-pod/chipper/cmd we have, coqui, leopard, vosk, a subfolder with "experimental" with houndify, whisper, whisper.cpp 
+All those follow the same stucutre, those are folder names in each of them they have a main.go just the pkg name changes 
+
+
+/wire-pod/chipper/epod
+EXTRA CONTEXT This holds the gpg keys
+
+/wire-pod/chipper/intent-data
+SNIPPET
+[
+	{
+		"name" : "intent_names_username_extend", 
+		"keyphrases": ["name is", "native is", "names", "name's", "my name is" ],
+		"requiresexact": false
+	},
+	{	
+		"name": "intent_weather_extend", 
+		"keyphrases" : ["weather", "whether", "the other", "the water", "no other", "weather forecast", "weather tomorrow", "whats the weather" ],
+		"requiresexact": false
+	},
+	{	
+		"name": "intent_names_ask", 
+		"keyphrases" : ["my name", "who am", "who am i"],
+		"requiresexact": false
+	},
+	{	
+		"name": "intent_knowledge_promptquestion", 
+		"keyphrases" : ["question", "weston", "i have a question", "conversation", "lets talk", "let's talk" ],
+		"requiresexact": false
+	},
+
+END OF SNIPPET 
+EXTREA CONTEXT: This holds all .json files with specifc intent variavles, for diffrent languages
+
+wire-pod/chipper/jdocs/botSdkInfo.json
+{"global_guid":"tni1TRsTRTaNSapjo0Y+Sw==","robots":[{"esn":"008093b9","ip_address":"192.168.178.67","guid":"jZ6onDpMPrJtolAf/YoDBQ==","activated":true}]}
+
+/Users/damianbitel/Vector3/wire-pod/chipper/jdocs/jdocs.json
+[{"thing":"vic:008093b9","name":"vic.AppTokens","jdoc":{"doc_version":1,"fmt_version":1,"client_metadata":"wirepod-new-token","json_doc":"{\"client_tokens\":[{\"hash\":\"HCBNzWuSArAncyeluVWLkWbD4v1awtzemcCFM6QcXn8nm9As0n9nYllALu6ECn39\",\"client_name\":\"wirepod\",\"app_id\":\"SDK\",\"issued_at\":\"2025-05-12T19:34:00.738582+02:00\"}]}"}},{"thing":"vic:008093b9","name":"vic.RobotSettings","jdoc":{"fmt_version":2,"json_doc":"{\n   \"button_wakeword\" : 0,\n   \"clock_24_hour\" : false,\n   \"custom_eye_color\" : {\n      \"enabled\" : true,\n      \"hue\" : 0.98900002241134644,\n      \"saturation\" : 0.89999997615814209\n   },\n   \"default_location\" : \"San Francisco, California, United States\",\n   \"dist_is_metric\" : false,\n   \"eye_color\" : 0,\n   \"locale\" : \"en-US\",\n   \"master_volume\" : 4,\n   \"temp_is_fahrenheit\" : true,\n   \"time_zone\" : \"Pacific/Honolulu\"\n}\n"}}]
+
+
+pkg files:
+
+wire-pod/chipper/pkg/initwirepod/startserver.go
+
+package initwirepod
+
+import (
+	"crypto/tls"
+	"fmt"
+	"net"
+	"net/http"
+	"os"
+	"runtime"
+
+	chipperpb "github.com/digital-dream-labs/api/go/chipperpb"
+	"github.com/digital-dream-labs/api/go/jdocspb"
+	"github.com/digital-dream-labs/api/go/tokenpb"
+	"github.com/digital-dream-labs/hugh/log"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/mdnshandler"
+	chipperserver "github.com/kercre123/wire-pod/chipper/pkg/servers/chipper"
+	jdocsserver "github.com/kercre123/wire-pod/chipper/pkg/servers/jdocs"
+	tokenserver "github.com/kercre123/wire-pod/chipper/pkg/servers/token"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	wpweb "github.com/kercre123/wire-pod/chipper/pkg/wirepod/config-ws"
+	wp "github.com/kercre123/wire-pod/chipper/pkg/wirepod/preqs"
+	sdkWeb "github.com/kercre123/wire-pod/chipper/pkg/wirepod/sdkapp"
+	"github.com/soheilhy/cmux"
+
+	//	grpclog "github.com/digital-dream-labs/hugh/grpc/interceptors/logger"
+
+	grpcserver "github.com/digital-dream-labs/hugh/grpc/server"
+)
+
+var PostingmDNS bool
+
+var serverOne cmux.CMux
+var serverTwo cmux.CMux
+var listenerOne net.Listener
+var listenerTwo net.Listener
+var voiceProcessor *wp.Server
+
+// grpcServer *grpc.Servervar
+var chipperServing bool = false
+
+func serveOk(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "ok")
+}
+
+func httpServe(l net.Listener) error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/ok:80", serveOk)
+	mux.HandleFunc("/ok", serveOk)
+	s := &http.Server{
+		Handler: mux,
+	}
+	return s.Serve(l)
+}
+
+func grpcServe(l net.Listener, p *wp.Server) error {
+	srv, err := grpcserver.New(
+		grpcserver.WithViper(),
+		grpcserver.WithReflectionService(),
+		grpcserver.WithInsecureSkipVerify(),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s, _ := chipperserver.New(
+		chipperserver.WithIntentProcessor(p),
+		chipperserver.WithKnowledgeGraphProcessor(p),
+		chipperserver.WithIntentGraphProcessor(p),
+	)
+
+	tokenServer := tokenserver.NewTokenServer()
+	jdocsServer := jdocsserver.NewJdocsServer()
+	//jdocsserver.IniToJson()
+
+	chipperpb.RegisterChipperGrpcServer(srv.Transport(), s)
+	jdocspb.RegisterJdocsServer(srv.Transport(), jdocsServer)
+	tokenpb.RegisterTokenServer(srv.Transport(), tokenServer)
+
+	return srv.Transport().Serve(l)
+}
+
+func BeginWirepodSpecific(sttInitFunc func() error, sttHandlerFunc interface{}, voiceProcessorName string) error {
+	logger.Init()
+
+	// begin wirepod stuff
+	vars.Init()
+	var err error
+	voiceProcessor, err = wp.New(sttInitFunc, sttHandlerFunc, voiceProcessorName)
+	wpweb.SttInitFunc = sttInitFunc
+	go sdkWeb.BeginServer()
+	http.HandleFunc("/api-chipper/", ChipperHTTPApi)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func StartFromProgramInit(sttInitFunc func() error, sttHandlerFunc interface{}, voiceProcessorName string) {
+	if runtime.GOOS == "android" || runtime.GOOS == "ios" {
+		os.Setenv("DEBUG_LOGGING", "true")
+		os.Setenv("STT_SERVICE", "vosk")
+	}
+	err := BeginWirepodSpecific(sttInitFunc, sttHandlerFunc, voiceProcessorName)
+	if err != nil {
+		logger.Println("\033[33m\033[1mWire-pod is not setup. Use the webserver at port 8080 to set up wire-pod.\033[0m")
+	} else if !vars.APIConfig.PastInitialSetup {
+		logger.Println("\033[33m\033[1mWire-pod is not setup. Use the webserver at port 8080 to set up wire-pod.\033[0m")
+	} else if (vars.APIConfig.STT.Service == "vosk" || vars.APIConfig.STT.Service == "whisper.cpp") && vars.APIConfig.STT.Language == "" {
+		logger.Println("\033[33m\033[1mLanguage value is blank, but STT service is " + vars.APIConfig.STT.Service + ". Reinitiating setup process.\033[0m")
+		logger.Println("\033[33m\033[1mWire-pod is not setup. Use the webserver at port 8080 to set up wire-pod.\033[0m")
+		vars.APIConfig.PastInitialSetup = false
+	} else {
+		go StartChipper()
+	}
+	// main thread is configuration ws
+	wpweb.StartWebServer()
+}
+
+func RestartServer() {
+	if chipperServing {
+		serverOne.Close()
+		serverTwo.Close()
+		listenerOne.Close()
+		listenerTwo.Close()
+	}
+	go StartChipper()
+}
+
+func StopServer() {
+	if chipperServing {
+		serverOne.Close()
+		serverTwo.Close()
+		listenerOne.Close()
+		listenerTwo.Close()
+	}
+}
+
+func StartChipper() {
+	// load certs
+	if vars.APIConfig.Server.EPConfig && runtime.GOOS != "android" {
+		go mdnshandler.PostmDNS()
+	}
+	var certPub []byte
+	var certPriv []byte
+	if runtime.GOOS == "android" || runtime.GOOS == "ios" {
+		if vars.APIConfig.Server.EPConfig {
+			certPub, _ = os.ReadFile(vars.AndroidPath + "/static/epod/ep.crt")
+			certPriv, _ = os.ReadFile(vars.AndroidPath + "/static/epod/ep.key")
+		} else {
+			var err error
+			certPub, _ = os.ReadFile(vars.AndroidPath + "/wire-pod/certs/cert.crt")
+			certPriv, err = os.ReadFile(vars.AndroidPath + "/wire-pod/certs/cert.key")
+			if err != nil {
+				logger.Println("wire-pod is not setup.")
+				return
+			}
+		}
+	} else {
+		if vars.APIConfig.Server.EPConfig {
+			certPub, _ = os.ReadFile("./epod/ep.crt")
+			certPriv, _ = os.ReadFile("./epod/ep.key")
+		} else {
+			var err error
+			certPub, _ = os.ReadFile("../certs/cert.crt")
+			certPriv, err = os.ReadFile("../certs/cert.key")
+			if err != nil {
+				logger.Println("wire-pod is not setup.")
+				return
+			}
+		}
+	}
+
+	logger.Println("Initiating TLS listener, cmux, gRPC handler, and REST handler")
+	cert, err := tls.X509KeyPair(certPub, certPriv)
+	if err != nil {
+		logger.Println(err)
+		os.Exit(1)
+	}
+	if runtime.GOOS == "android" && vars.APIConfig.Server.Port == "443" {
+		logger.Println("not starting chipper at port 443 because android")
+	} else {
+		logger.Println("Starting chipper server at port " + vars.APIConfig.Server.Port)
+		listenerOne, err = tls.Listen("tcp", ":"+vars.APIConfig.Server.Port, &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			CipherSuites: nil,
+		})
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
+	serverOne = cmux.New(listenerOne)
+	grpcListenerOne := serverOne.Match(cmux.HTTP2())
+	httpListenerOne := serverOne.Match(cmux.HTTP1Fast())
+	go grpcServe(grpcListenerOne, voiceProcessor)
+	go httpServe(httpListenerOne)
+
+	if vars.APIConfig.Server.EPConfig && os.Getenv("NO8084") != "true" {
+		logger.Println("Starting chipper server at port 8084 for 2.0.1 compatibility")
+		listenerTwo, err = tls.Listen("tcp", ":8084", &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			CipherSuites: nil,
+		})
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		serverTwo = cmux.New(listenerTwo)
+		grpcListenerTwo := serverTwo.Match(cmux.HTTP2())
+		httpListenerTwo := serverTwo.Match(cmux.HTTP1Fast())
+		go grpcServe(grpcListenerTwo, voiceProcessor)
+		go httpServe(httpListenerTwo)
+	}
+
+	fmt.Println("\033[33m\033[1mwire-pod started successfully!\033[0m")
+
+	chipperServing = true
+	if vars.APIConfig.Server.EPConfig && os.Getenv("NO8084") != "true" {
+		if runtime.GOOS != "android" {
+			go serverOne.Serve()
+		}
+		serverTwo.Serve()
+		logger.Println("Stopping chipper server")
+		chipperServing = false
+	} else {
+		serverOne.Serve()
+		logger.Println("Stopping chipper server")
+		chipperServing = false
+	}
+}
+
+
+/wire-pod/chipper/pkg/initwirepod/web.go
+
+package initwirepod
+
+import (
+	"fmt"
+	"net/http"
+	"strconv"
+
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	botsetup "github.com/kercre123/wire-pod/chipper/pkg/wirepod/setup"
+)
+
+// cant be part of config-ws, otherwise import cycle
+
+func ChipperHTTPApi(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case r.URL.Path == "/api-chipper/restart":
+		RestartServer()
+		fmt.Fprint(w, "done")
+		return
+	case r.URL.Path == "/api-chipper/use_ip":
+		port := r.FormValue("port")
+		if port == "" {
+			fmt.Fprint(w, "error: must have port")
+			return
+		}
+		_, err := strconv.Atoi(port)
+		if err != nil {
+			fmt.Fprint(w, "error: port is invalid")
+			return
+		}
+		vars.APIConfig.Server.EPConfig = false
+		vars.APIConfig.Server.Port = port
+		err = botsetup.CreateCertCombo()
+		botsetup.CreateServerConfig()
+		if err != nil {
+			logger.Println(err)
+			fmt.Fprint(w, "error: "+err.Error())
+			return
+		}
+		vars.APIConfig.PastInitialSetup = true
+		vars.WriteConfigToDisk()
+		RestartServer()
+		fmt.Fprint(w, "done")
+		return
+	case r.URL.Path == "/api-chipper/use_ep":
+		vars.APIConfig.Server.EPConfig = true
+		vars.APIConfig.Server.Port = "443"
+		vars.APIConfig.PastInitialSetup = true
+		botsetup.CreateServerConfig()
+		vars.WriteConfigToDisk()
+		RestartServer()
+		fmt.Fprint(w, "done")
+		return
+	}
+}
+
+/wire-pod/chipper/pkg/logger/logger.go
+package logger
+
+import (
+	"fmt"
+	"os"
+	"time"
+)
+
+var debugLogging bool = true
+var LogList string
+var LogArray []string
+
+var LogTrayList string
+var LogTrayArray []string
+var LogTrayChan chan string
+
+func GetLogTrayChan() chan string {
+	return LogTrayChan
+}
+
+func Init() {
+	LogTrayChan = make(chan string)
+	if os.Getenv("DEBUG_LOGGING") == "true" {
+		debugLogging = true
+	} else {
+		debugLogging = false
+	}
+}
+
+func Println(a ...any) {
+	LogTray(a...)
+	if debugLogging {
+		fmt.Println(a...)
+	}
+}
+
+func LogUI(a ...any) {
+	LogArray = append(LogArray, time.Now().Format("2006.01.02 15:04:05")+": "+fmt.Sprint(a...)+"\n")
+	if len(LogArray) >= 50 {
+		LogArray = LogArray[1:]
+	}
+	LogList = ""
+	for _, b := range LogArray {
+		LogList = LogList + b
+	}
+}
+
+func LogTray(a ...any) {
+	LogTrayArray = append(LogTrayArray, time.Now().Format("2006.01.02 15:04:05")+": "+fmt.Sprint(a...)+"\n")
+	if len(LogTrayArray) >= 200 {
+		LogTrayArray = LogTrayArray[1:]
+	}
+	LogTrayList = ""
+	for _, b := range LogTrayArray {
+		LogTrayList = LogTrayList + b
+	}
+	select {
+	case LogTrayChan <- time.Now().Format("2006.01.02 15:04:05") + ": " + fmt.Sprint(a...) + "\n":
+	default:
+	}
+}
+
+
+/wire-pod/chipper/pkg/logger/msg-and.go
+//go:build android
+// +build android
+
+package logger
+
+import (
+	"fmt"
+)
+
+func WarnMsg(msg string) {
+	fmt.Println(msg)
+}
+
+func ErrMsg(msg string) {
+	fmt.Println(msg)
+}
+
+/wire-pod/chipper/pkg/logger/msg-winmac.go
+//go:build !android
+// +build !android
+
+package logger
+
+import (
+	"github.com/ncruces/zenity"
+)
+
+func WarnMsg(msg string) {
+	zenity.Warning(
+		msg,
+		zenity.WarningIcon,
+		zenity.Title("WirePod"),
+	)
+}
+
+func ErrMsg(msg string) {
+	zenity.Error(
+		msg,
+		zenity.ErrorIcon,
+		zenity.Title("WirePod"),
+	)
+}
+
+
+
+/wire-pod/chipper/pkg/mdnshandler/mdns.go
+package mdnshandler
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	"github.com/kercre123/zeroconf"
+)
+
+// legacy ZeroConf code
+
+var PostingmDNS bool
+var MDNSNow chan bool
+var MDNSTimeBeforeNextRegister float32
+
+func PostmDNSWhenNewVector() {
+	time.Sleep(time.Second * 5)
+	for {
+		resolver, _ := zeroconf.NewResolver(nil)
+		entries := make(chan *zeroconf.ServiceEntry)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*80)
+		err := resolver.Browse(ctx, "_ankivector._tcp", "local.", entries)
+		if err != nil {
+			fmt.Println(err)
+			cancel()
+			return
+		}
+		for entry := range entries {
+			if strings.Contains(entry.Service, "ankivector") {
+				logger.Println("Vector discovered on network, broadcasting mDNS")
+				cancel()
+				time.Sleep(time.Second)
+				PostmDNSNow()
+				return
+			}
+		}
+		cancel()
+	}
+
+}
+
+func PostmDNSNow() {
+	logger.Println("Broadcasting mDNS now (outside of timer loop)")
+	select {
+	case MDNSNow <- true:
+	default:
+	}
+}
+
+func PostmDNS() {
+	if os.Getenv("DISABLE_MDNS") == "true" {
+		fmt.Println("mDNS is disabled")
+		return
+	}
+	if PostingmDNS {
+		return
+	}
+	go PostmDNSWhenNewVector()
+	MDNSNow = make(chan bool)
+	go func() {
+		for range MDNSNow {
+			MDNSTimeBeforeNextRegister = 30
+		}
+	}()
+	PostingmDNS = true
+	logger.Println("Registering escapepod.local on network (loop)")
+	for {
+		ipAddr := vars.GetOutboundIP().String()
+		server, _ := zeroconf.RegisterProxy("escapepod", "_app-proto._tcp", "local.", 8084, "escapepod", []string{ipAddr}, []string{"txtv=0", "lo=1", "la=2"}, nil)
+		if os.Getenv("PRINT_MDNS") == "true" {
+			logger.Println("mDNS broadcasted")
+		}
+		for {
+			if MDNSTimeBeforeNextRegister >= 30 {
+				MDNSTimeBeforeNextRegister = 0
+				break
+			}
+			MDNSTimeBeforeNextRegister = MDNSTimeBeforeNextRegister + (float32(1) / float32(4))
+			time.Sleep(time.Second / 4)
+		}
+		server.Shutdown()
+		server = nil
+		time.Sleep(time.Second / 3)
+	}
+}
+
+/wire-pod/chipper/pkg/scripting/bcontrol.go
+package scripting
+
+import (
+	"context"
+
+	"github.com/fforchino/vector-go-sdk/pkg/vectorpb"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	lua "github.com/yuin/gopher-lua"
+)
+
+func SetBControlFunctions(L *lua.LState) {
+	start := make(chan bool)
+	stop := make(chan bool)
+	currentlyAssumed := false
+	L.SetGlobal("assumeBehaviorControl", L.NewFunction(func(*lua.LState) int {
+		robot := gRfLS(L)
+		priority := vectorpb.ControlRequest_OVERRIDE_BEHAVIORS
+		if priority != 0 && priority != 10 && priority != 20 && priority != 30 {
+			logger.Println("LUA: Behavior control priority was not valid. Valid choices are 10, 20, and 30. Assuming 10.")
+		} else {
+			priority = vectorpb.ControlRequest_Priority(L.ToInt(1))
+		}
+		controlRequest := &vectorpb.BehaviorControlRequest{
+			RequestType: &vectorpb.BehaviorControlRequest_ControlRequest{
+				ControlRequest: &vectorpb.ControlRequest{
+					Priority: priority,
+				},
+			},
+		}
+		go func() {
+			// * begin - modified from official vector-go-sdk
+			r, err := robot.Conn.BehaviorControl(
+				context.Background(),
+			)
+			if err != nil {
+				logger.Println(err)
+				return
+			}
+
+			if err := r.Send(controlRequest); err != nil {
+				logger.Println(err)
+				return
+			}
+
+			for {
+				ctrlresp, err := r.Recv()
+				if err != nil {
+					logger.Println(err)
+					return
+				}
+				if ctrlresp.GetControlGrantedResponse() != nil {
+					start <- true
+					break
+				}
+			}
+
+			for {
+				select {
+				case <-stop:
+					if err := r.Send(
+						&vectorpb.BehaviorControlRequest{
+							RequestType: &vectorpb.BehaviorControlRequest_ControlRelease{
+								ControlRelease: &vectorpb.ControlRelease{},
+							},
+						},
+					); err != nil {
+						logger.Println(err)
+						return
+					}
+					return
+				default:
+					continue
+				}
+			}
+			// * end - modified from official vector-go-sdk
+		}()
+		for range start {
+			break
+		}
+		currentlyAssumed = true
+		return 0
+	}))
+	L.SetGlobal("releaseBehaviorControl", L.NewFunction(func(*lua.LState) int {
+		if currentlyAssumed {
+			stop <- true
+			currentlyAssumed = false
+			return 0
+		}
+		return 1
+	}))
+
+}
+
+/wire-pod/chipper/pkg/scripting/scripting.go
+package scripting
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"time"
+
+	"github.com/fforchino/vector-go-sdk/pkg/vector"
+	"github.com/fforchino/vector-go-sdk/pkg/vectorpb"
+	"github.com/kercre123/wire-pod/chipper/pkg/logger"
+	"github.com/kercre123/wire-pod/chipper/pkg/vars"
+	lualibs "github.com/vadv/gopher-lua-libs"
+	lua "github.com/yuin/gopher-lua"
+)
+
+/*
+
+assumeBehaviorControl(priority int)
+	-	10,20,30 (10 highest priority, overriding behaviors. 30 lowest)
+releaseBehaviorControl()
+
+<these require behavior control>
+<goroutine determines whether the function blocks or not>
+sayText(text string, goroutine bool)
+playAnimation(animation string, goroutine bool)
+
+*/
+
+type ExternalLuaRequest struct {
+	ESN    string `json:"esn"`
+	Script string `json:"script"`
+}
+
+type Bot struct {
+	ESN   string
+	Robot *vector.Vector
+}
+
+func sayText(L *lua.LState) int {
+	textToSay := L.ToString(1)
+	executeWithGoroutine(L, func(L *lua.LState) error {
+		_, err := gRfLS(L).Conn.SayText(L.Context(), &vectorpb.SayTextRequest{Text: textToSay, UseVectorVoice: true, DurationScalar: 1.0})
+		return err
+	})
+	return 0
+}
+
+func playAnimation(L *lua.LState) int {
+	animToPlay := L.ToString(1)
+	executeWithGoroutine(L, func(L *lua.LState) error {
+		_, err := gRfLS(L).Conn.PlayAnimation(L.Context(), &vectorpb.PlayAnimationRequest{Animation: &vectorpb.Animation{Name: animToPlay}, Loops: 1})
+		return err
+	})
+	return 0
+}
+
+// get robot from LState
+func gRfLS(L *lua.LState) *vector.Vector {
+	ud := L.GetGlobal("bot").(*lua.LUserData)
+	bot := ud.Value.(*Bot)
+	return bot.Robot
+}
+
+func MakeLuaState(esn string, validating bool) (*lua.LState, error) {
+	L := lua.NewState()
+	lualibs.Preload(L)
+	L.SetContext(context.Background())
+	L.SetGlobal("sayText", L.NewFunction(sayText))
+	L.SetGlobal("playAnimation", L.NewFunction(playAnimation))
+	SetBControlFunctions(L)
+	ud := L.NewUserData()
+	if !validating {
+		rob, err := vars.GetRobot(esn)
+		if err != nil {
+			return nil, err
+		}
+		ctx, can := context.WithTimeout(context.Background(), time.Second*3)
+		defer can()
+		_, err = rob.Conn.BatteryState(ctx, &vectorpb.BatteryStateRequest{})
+		if err != nil {
+			return nil, err
+		}
+		ud.Value = &Bot{ESN: esn, Robot: rob}
+		L.SetGlobal("bot", ud)
+	}
+	return L, nil
+}
+
+func executeWithGoroutine(L *lua.LState, fn func(L *lua.LState) error) {
+	goroutine := L.ToBool(2)
+	if goroutine {
+		go func() {
+			err := fn(L)
+			if err != nil {
+				logger.Println("LUA: failure: " + err.Error())
+			}
+		}()
+	} else {
+		err := fn(L)
+		if err != nil {
+			logger.Println("LUA: failure: " + err.Error())
+		}
+	}
+}
+
+func RunLuaScript(esn string, luaScript string) error {
+	L, err := MakeLuaState(esn, false)
+	if err != nil {
+		return err
+	}
+	defer L.Close()
+
+	if err := L.DoString(luaScript); err != nil {
+		return err
+	}
+	L.DoString("releaseBehaviorControl()")
+	return nil
+}
+
+func ValidateLuaScript(luaScript string) error {
+	L, _ := MakeLuaState("", true)
+	defer L.Close()
+
+	err := L.DoString(fmt.Sprintf("return function() %s end", luaScript))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ScriptingAPI(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/api-lua/run_script":
+		fBody, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "request body couldn't be read: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		var scriptReq ExternalLuaRequest
+		err = json.Unmarshal(fBody, &scriptReq)
+		if err != nil {
+			http.Error(w, "request body couldn't be unmarshalled: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		err = RunLuaScript(scriptReq.ESN, scriptReq.Script)
+		if err != nil {
+			logger.Println(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
+func RegisterScriptingAPI() {
+	http.HandleFunc("/api-lua/", ScriptingAPI)
+}
